@@ -13,6 +13,7 @@ import { UniswapConfig } from './uniswap/uniswap.config';
 import { VVSConfig } from './vvs/vvs.config';
 import { RefConfig } from './ref/ref.config';
 import { PancakeSwapConfig } from './pancakeswap/pancakeswap.config';
+import { XRPLDEXConfig } from './xrpldex/xrpldex.config';
 
 export namespace ConnectorsRoutes {
   export const router = Router();
@@ -94,6 +95,11 @@ export namespace ConnectorsRoutes {
             name: 'pancakeswap',
             trading_type: PancakeSwapConfig.config.tradingTypes,
             available_networks: PancakeSwapConfig.config.availableNetworks,
+          },
+          {
+            name: 'xrpldex',
+            trading_type: XRPLDEXConfig.config.tradingTypes,
+            available_networks: XRPLDEXConfig.config.availableNetworks,
           },
         ],
       });

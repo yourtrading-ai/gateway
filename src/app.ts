@@ -30,6 +30,8 @@ import morgan from 'morgan';
 import { SushiswapConfig } from './connectors/sushiswap/sushiswap.config';
 import { DefikingdomsConfig } from './connectors/defikingdoms/defikingdoms.config';
 import { PancakeSwapConfig } from './connectors/pancakeswap/pancakeswap.config';
+import { XRPLDEXRoutes } from './connectors/xrpldex/xrpldex.routes';
+import { XRPLRoutes } from './chains/xrpl/xrpl.routes';
 
 import swaggerUi from 'swagger-ui-express';
 import { NearRoutes } from './chains/near/near.routes';
@@ -66,6 +68,8 @@ gatewayApp.use('/amm/liquidity', AmmLiquidityRoutes.router);
 gatewayApp.use('/wallet', WalletRoutes.router);
 gatewayApp.use('/cosmos', CosmosRoutes.router);
 gatewayApp.use('/near', NearRoutes.router);
+gatewayApp.use('/xrpldex', XRPLDEXRoutes.router);
+gatewayApp.use('/xrpl', XRPLRoutes.router);
 
 // a simple route to test that the server is running
 gatewayApp.get('/', (_req: Request, res: Response) => {
@@ -131,6 +135,8 @@ export const swaggerDocument = SwaggerManager.generateSwaggerJson(
     './docs/swagger/network-routes.yml',
     './docs/swagger/near-routes.yml',
     './docs/swagger/cosmos-routes.yml',
+    './docs/swagger/xrpl-routes.yml',
+    './docs/swagger/xrpldex-routes.yml',
   ]
 );
 

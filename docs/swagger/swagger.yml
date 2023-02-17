@@ -21,8 +21,8 @@ tags:
     description: 'Manage private keys available for use in Gateway'
   - name: 'amm'
     description: 'Interact with AMM decentralized exchanges'
-  - name: 'clob'
-    description: 'Interact with CLOB decentralized exchanges'
+  - name: 'clob-beta'
+    description: 'Interact with CLOB decentralized exchanges (BETA)'
   - name: 'amm/liquidity'
     description: 'Interact with AMM LP contracts'
   - name: 'evm'
@@ -31,6 +31,10 @@ tags:
     description: 'Interact with the Cosmos blockchain'
   - name: 'near'
     description: 'Interact with the Near blockchain'
+  - name: 'xrpl'
+    description: 'Interact with the XRP Ledger'
+  - name: 'xrpldex'
+    description: 'Interact with XRP Ledger decentralized exchange'
 
 schemes:
   - 'http'

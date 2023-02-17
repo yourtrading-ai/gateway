@@ -4,6 +4,7 @@ import { Ethereum } from '../chains/ethereum/ethereum';
 import { BinanceSmartChain } from '../chains/binance-smart-chain/binance-smart-chain';
 import { Harmony } from '../chains/harmony/harmony';
 import { Polygon } from '../chains/polygon/polygon';
+import { XRPL, XRPLish } from '../chains/xrpl/xrpl';
 import { MadMeerkat } from '../connectors/mad_meerkat/mad_meerkat';
 import { Openocean } from '../connectors/openocean/openocean';
 import { Pangolin } from '../connectors/pangolin/pangolin';
@@ -13,6 +14,7 @@ import { PancakeSwap } from '../connectors/pancakeswap/pancakeswap';
 import { Uniswap } from '../connectors/uniswap/uniswap';
 import { UniswapLP } from '../connectors/uniswap/uniswap.lp';
 import { VVSConnector } from '../connectors/vvs/vvs';
+import { XRPLDEX } from '../connectors/xrpldex/xrpldex';
 import {
   Ethereumish,
   Nearish,
@@ -27,13 +29,16 @@ import { Defikingdoms } from '../connectors/defikingdoms/defikingdoms';
 import { Defira } from '../connectors/defira/defira';
 import { Near } from '../chains/near/near';
 import { Ref } from '../connectors/ref/ref';
+import { XRPLDEXish } from '../connectors/xrpldex/xrpldex';
 
-export type ChainUnion = Ethereumish | Nearish;
+export type ChainUnion = Ethereumish | Nearish | XRPLish;
 
 export type Chain<T> = T extends Ethereumish
   ? Ethereumish
   : T extends Nearish
   ? Nearish
+  : T extends XRPLish
+  ? XRPLish
   : never;
 
 export async function getChain<T>(
@@ -51,6 +56,7 @@ export async function getChain<T>(
   else if (chain === 'binance-smart-chain')
     chainInstance = BinanceSmartChain.getInstance(network);
   else if (chain === 'cronos') chainInstance = Cronos.getInstance(network);
+  else if (chain === 'xrpl') chainInstance = XRPL.getInstance(network);
   else throw new Error('unsupported chain');
 
   if (!chainInstance.ready()) {
@@ -60,7 +66,7 @@ export async function getChain<T>(
   return chainInstance as Chain<T>;
 }
 
-type ConnectorUnion = Uniswapish | UniswapLPish | Perpish | RefAMMish;
+type ConnectorUnion = Uniswapish | UniswapLPish | Perpish | RefAMMish | XRPLDEXish;
 
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
@@ -70,6 +76,8 @@ export type Connector<T> = T extends Uniswapish
   ? Perpish
   : T extends RefAMMish
   ? RefAMMish
+  : T extends XRPLDEXish
+  ? XRPLDEXish
   : never;
 
 export async function getConnector<T>(
@@ -114,6 +122,8 @@ export async function getConnector<T>(
     connectorInstance = PancakeSwap.getInstance(chain, network);
   } else if (connector === 'sushiswap') {
     connectorInstance = Sushiswap.getInstance(chain, network);
+  }  else if (chain === 'xrpl' && connector === 'xrpldex') {
+    connectorInstance = XRPLDEX.getInstance(chain, network);
   } else {
     throw new Error('unsupported chain or connector');
   }

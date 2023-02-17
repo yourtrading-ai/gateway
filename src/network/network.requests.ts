@@ -5,6 +5,7 @@ import {
 } from '../services/common-interfaces';
 
 import { TokenInfo } from '../chains/ethereum/ethereum-base';
+import { TrustlineInfo } from '../chains/xrpl/xrpl';
 
 export interface BalanceRequest extends NetworkSelectionRequest {
   address: string; // the users public Ethereum key
@@ -53,5 +54,5 @@ export interface TokensRequest {
 }
 
 export interface TokensResponse {
-  tokens: TokenInfo[];
+  tokens: (TokenInfo | TrustlineInfo)[];
 }
