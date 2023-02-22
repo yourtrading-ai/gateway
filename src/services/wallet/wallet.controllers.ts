@@ -4,6 +4,7 @@ import { BinanceSmartChain } from '../../chains/binance-smart-chain/binance-smar
 import { Cronos } from '../../chains/cronos/cronos';
 import { Ethereum } from '../../chains/ethereum/ethereum';
 import { Polygon } from '../../chains/polygon/polygon';
+import { Solana } from '../../chains/solana/solana';
 import { Cosmos } from '../../chains/cosmos/cosmos';
 import { Harmony } from '../../chains/harmony/harmony';
 
@@ -43,7 +44,7 @@ export async function addWallet(
   if (!passphrase) {
     throw new Error('There is no passphrase');
   }
-  let connection: EthereumBase | Near | Cosmos;
+  let connection: EthereumBase | Solana | Near | Cosmos;
   let address: string | undefined;
   let encryptedPrivateKey: string | undefined;
 
@@ -55,6 +56,8 @@ export async function addWallet(
     connection = Harmony.getInstance(req.network);
   } else if (req.chain === 'cronos') {
     connection = Cronos.getInstance(req.network);
+  } else if (req.chain === 'solana') {
+    connection = await Solana.getInstance(req.network);
   } else if (req.chain === 'polygon') {
     connection = Polygon.getInstance(req.network);
   } else if (req.chain === 'cosmos') {
@@ -82,7 +85,15 @@ export async function addWallet(
   }
 
   try {
-    if (connection instanceof EthereumBase) {
+    if (connection instanceof Solana) {
+      address = connection
+        .getKeypairFromPrivateKey(req.privateKey)
+        .publicKey.toBase58();
+      encryptedPrivateKey = await connection.encrypt(
+        req.privateKey,
+        passphrase
+      );
+    } else if (connection instanceof EthereumBase) {
       address = connection.getWalletFromPrivateKey(req.privateKey).address;
       encryptedPrivateKey = await connection.encrypt(
         req.privateKey,
