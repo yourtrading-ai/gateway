@@ -99,33 +99,6 @@ describe('Serum Dev Tools', () => {
       //   orderSelfTradeBehavior: 'abortTransaction',
       // },
       // {
-      //   marketName: 'CMPN/USDC (NEW)',
-      //   marketAddress: '8EapfK6wCoRy5sFXZX9gudi8j3m5nLZcuDgxDGWVLgSd',
-      //   baseTokenName: 'CMPN',
-      //   baseTokenAddress: '9tQhCmFtCh56qqf9szLQ8dNjYcd4TTv6MWPpw6MqLubu',
-      //   quoteTokenName: 'USDC',
-      //   quoteTokenAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      //   programId: 'srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX',
-      //   orderSide: 'buy',
-      //   orderType: 'postOnly',
-      //   orderSize: 1,
-      //   orderPrice: 0.01,
-      //   orderSelfTradeBehavior: 'abortTransaction',
-      // },
-      // {
-      //   marketName: 'CMPN/USDC',
-      //   marketAddress: 'GHgWKwDptCj5k5DMsLbca6BB5SWVK61Ygs9a1ciEg9jF',
-      //   baseTokenName: 'CMPN',
-      //   baseTokenAddress: '9tQhCmFtCh56qqf9szLQ8dNjYcd4TTv6MWPpw6MqLubu',
-      //   quoteTokenName: 'USDC',
-      //   quoteTokenAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      //   programId: '9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin',
-      //   orderSide: 'buy',
-      //   orderType: 'postOnly',
-      //   orderSize: 1,
-      //   orderPrice: 0.01,
-      //   orderSelfTradeBehavior: 'abortTransaction',
-      // },
     ];
 
     for (const market of markets) {
