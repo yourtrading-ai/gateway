@@ -8,6 +8,7 @@ import {
   getOrCreateTokenAccount,
   poll,
   token,
+  tokens,
 } from './solana.controllers';
 import {
   SolanaBalanceRequest,
@@ -23,6 +24,8 @@ import {
   validateSolanaPollRequest,
   validateSolanaPostTokenRequest,
 } from './solana.validators';
+import { NetworkSelectionRequest } from '../../services/common-interfaces';
+import { TokenInfo } from '@solana/spl-token-registry';
 
 export namespace SolanaRoutes {
   export const router = Router();
@@ -101,6 +104,21 @@ export namespace SolanaRoutes {
         response
           .status(200)
           .json(await getOrCreateTokenAccount(solana, request.body));
+      }
+    )
+  );
+
+  // Returns the token list
+  router.get(
+    '/tokens',
+    asyncHandler(
+      async (
+        request: Request<ParamsDictionary, unknown, NetworkSelectionRequest>,
+        response: Response<TokenInfo[]>,
+        _next: NextFunction
+      ) => {
+        const solana = await getSolana(request);
+        response.status(200).json(await tokens(solana, request.body));
       }
     )
   );

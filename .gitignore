@@ -3,7 +3,6 @@
 /dist
 /db
 /.idea
-/*.iml
 package-lock.json
 /certs
 /node_modules

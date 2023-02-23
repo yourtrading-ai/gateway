@@ -1,7 +1,10 @@
 import { Keypair, PublicKey, TransactionResponse } from '@solana/web3.js';
 import { getNotNullOrThrowError } from '../../connectors/serum/serum.helpers';
 import { latency, TokenValue, tokenValueToString } from '../../services/base';
-import { CustomTransactionResponse } from '../../services/common-interfaces';
+import {
+  CustomTransactionResponse,
+  NetworkSelectionRequest,
+} from '../../services/common-interfaces';
 import {
   HttpException,
   LOAD_WALLET_ERROR_CODE,
@@ -19,6 +22,7 @@ import {
   SolanaTokenRequest,
   SolanaTokenResponse,
 } from './solana.requests';
+import { TokenInfo } from '@solana/spl-token-registry/dist/main/lib/tokenlist';
 
 export async function balances(
   solanaish: Solanaish,
@@ -126,6 +130,18 @@ export async function token(
     accountAddress: account?.pubkey.toBase58(),
     amount,
   };
+}
+
+export async function tokens(
+  solanaish: Solanaish,
+  req: NetworkSelectionRequest
+): Promise<TokenInfo[]> {
+  const tokenList = solanaish.getTokenList();
+  if (!tokenList) {
+    throw new HttpException(500, "Token list can't be returned." + req);
+  }
+
+  return tokenList;
 }
 
 export async function getOrCreateTokenAccount(
