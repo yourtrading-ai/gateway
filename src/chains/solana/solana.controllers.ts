@@ -21,6 +21,10 @@ import {
   SolanaPollResponse,
   SolanaTokenRequest,
   SolanaTokenResponse,
+  SolanaWrapSOLRequest,
+  SolanaWrapSOLResponse,
+  SolanaUnwrapSOLRequest,
+  SolanaUnwrapSOLResponse,
 } from './solana.requests';
 import { TokenInfo } from '@solana/spl-token-registry/dist/main/lib/tokenlist';
 
@@ -179,5 +183,35 @@ export async function getOrCreateTokenAccount(
     mintAddress: mintAddress.toBase58(),
     accountAddress: account?.address.toBase58(),
     amount,
+  };
+}
+
+export async function wrapSOLController(
+  solanaish: Solanaish,
+  request: SolanaWrapSOLRequest
+): Promise<SolanaWrapSOLResponse> {
+  const response = await solanaish.wrapSOL(request);
+
+  return {
+    emitterAccount: response.emitterAccount,
+    receiverAccount: response.receiverAccount,
+    receiverAssociatedTokenAccount: response.receiverAssociatedTokenAccount,
+    feePayerAccount: response.feePayerAccount,
+    transferSignature: response.transferSignature,
+    wrappedAmount: response.wrappedAmount,
+  };
+}
+
+export async function unwrapSOLController(
+  solanaish: Solanaish,
+  request: SolanaUnwrapSOLRequest
+): Promise<SolanaUnwrapSOLResponse> {
+  const response = await solanaish.unwrapSOL(request);
+
+  return {
+    emitterAccount: response.emitterAccount,
+    destinationAccount: response.destinationAccount,
+    destinationAssociatedTokenAccount:
+      response.destinationAssociatedTokenAccount,
   };
 }

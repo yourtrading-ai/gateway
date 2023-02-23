@@ -1,6 +1,10 @@
 import {
   Account as TokenAccount,
+  closeAccount,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
   getOrCreateAssociatedTokenAccount,
+  NATIVE_MINT,
 } from '@solana/spl-token';
 import { TokenInfo, TokenListContainer } from '@solana/spl-token-registry';
 import {
@@ -9,12 +13,15 @@ import {
   Commitment,
   Connection,
   Keypair,
+  LAMPORTS_PER_SOL,
   LogsCallback,
   LogsFilter,
   ParsedAccountData,
   PublicKey,
   SlotUpdateCallback,
+  SystemProgram,
   TokenAmount,
+  Transaction,
   TransactionResponse,
 } from '@solana/web3.js';
 import bs58 from 'bs58';
@@ -31,7 +38,13 @@ import { countDecimals, TokenValue, walletPath } from '../../services/base';
 import { ConfigManagerCertPassphrase } from '../../services/config-manager-cert-passphrase';
 import { logger } from '../../services/logger';
 import { Config, getSolanaConfig } from './solana.config';
-import { TransactionResponseStatusCode } from './solana.requests';
+import {
+  SolanaUnwrapSOLRequest,
+  SolanaUnwrapSOLResponse,
+  SolanaWrapSOLRequest,
+  SolanaWrapSOLResponse,
+  TransactionResponseStatusCode,
+} from './solana.requests';
 import axios from 'axios';
 
 const crypto = require('crypto').webcrypto;
@@ -144,6 +157,14 @@ export class Solana implements Solanaish {
 
   // returns a Tokens for a given list source and list type
   async getTokenList(): Promise<TokenInfo[]> {
+    // const tokenListProvider = new TokenListProvider();
+    //
+    // const tokens = await runWithRetryAndTimeout(
+    //   tokenListProvider,
+    //   tokenListProvider.resolve,
+    //   [new CustomStaticTokenListResolutionStrategy()]
+    // );
+
     const tokens: TokenInfo[] =
       await new CustomStaticTokenListResolutionStrategy(
         this._config.tokens.url
@@ -609,6 +630,78 @@ export class Solana implements Solanaish {
     if (this._network in Solana._instances) {
       delete Solana._instances[this._network];
     }
+  }
+
+  async wrapSOL(request: SolanaWrapSOLRequest): Promise<SolanaWrapSOLResponse> {
+    const connection = this._connection;
+    const emitterAccount = Keypair.fromSecretKey(bs58.decode(request.emitter));
+    const receiverAccount = new PublicKey(request.receiver);
+    const feePayerAccount = Keypair.fromSecretKey(
+      bs58.decode(request.feePayer)
+    );
+    const receiverAssociatedTokenAccount = await getAssociatedTokenAddress(
+      NATIVE_MINT,
+      receiverAccount
+    );
+    const associatedTokenAccountInstruction =
+      createAssociatedTokenAccountInstruction(
+        emitterAccount.publicKey,
+        receiverAssociatedTokenAccount,
+        emitterAccount.publicKey,
+        NATIVE_MINT
+      );
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: emitterAccount.publicKey,
+        toPubkey: receiverAssociatedTokenAccount,
+        lamports: request.amount * LAMPORTS_PER_SOL,
+      }),
+      associatedTokenAccountInstruction
+    );
+    const wrappedAmount = request.amount;
+    transaction.feePayer = feePayerAccount.publicKey;
+    const transferSignature = await connection.sendTransaction(transaction, [
+      emitterAccount,
+    ]);
+
+    return {
+      emitterAccount: emitterAccount.publicKey.toBase58(),
+      receiverAccount: receiverAccount.toBase58(),
+      receiverAssociatedTokenAccount: receiverAssociatedTokenAccount.toBase58(),
+      feePayerAccount: feePayerAccount.publicKey.toBase58(),
+      transferSignature: transferSignature,
+      wrappedAmount: wrappedAmount,
+    };
+  }
+
+  async unwrapSOL(
+    request: SolanaUnwrapSOLRequest
+  ): Promise<SolanaUnwrapSOLResponse> {
+    const network = this._connection;
+    const owner: string = request.owner;
+    const destination: PublicKey = new PublicKey(request.destination);
+
+    const ownerKeypair = Keypair.fromSecretKey(bs58.decode(owner));
+
+    const destinationAssociatedTokenAccount = await getAssociatedTokenAddress(
+      NATIVE_MINT,
+      destination
+    );
+
+    await closeAccount(
+      network,
+      ownerKeypair,
+      destinationAssociatedTokenAccount,
+      ownerKeypair.publicKey,
+      ownerKeypair.publicKey
+    );
+
+    return {
+      emitterAccount: ownerKeypair.publicKey.toBase58(),
+      destinationAccount: destination.toString(),
+      destinationAssociatedTokenAccount:
+        destinationAssociatedTokenAccount.toString(),
+    };
   }
 }
 

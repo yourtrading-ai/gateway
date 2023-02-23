@@ -33,6 +33,35 @@ export interface SolanaTokenResponse {
   amount: string | null;
 }
 
+export interface SolanaWrapSOLRequest extends NetworkSelectionRequest {
+  network: string; // RPC Endpoint
+  emitter: string; // the emitter private key as Base58
+  receiver: string; // the receiver public key as Base58
+  feePayer: string; // the fee payer private key as Base58
+  amount: number; // the quantity of n, n >= 0
+}
+
+export interface SolanaWrapSOLResponse {
+  emitterAccount: string;
+  receiverAccount: string;
+  receiverAssociatedTokenAccount: string;
+  feePayerAccount: string;
+  transferSignature: string;
+  wrappedAmount: number | null;
+}
+
+export interface SolanaUnwrapSOLRequest extends NetworkSelectionRequest {
+  network: string;
+  owner: string; // private key as Base58
+  destination: string; // public key as Base58
+}
+
+export interface SolanaUnwrapSOLResponse {
+  emitterAccount: string;
+  destinationAccount: string;
+  destinationAssociatedTokenAccount: string;
+}
+
 export interface SolanaPollRequest extends NetworkSelectionRequest {
   txHash: string;
 }
