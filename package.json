@@ -23,11 +23,10 @@
     "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts"
   },
   "dependencies": {
-    "@blockworks-foundation/mango-client": "^3.2.14",
+    "@blockworks-foundation/mango-client": "3.2.14",
     "@cosmjs/proto-signing": "^0.28.10",
     "@cosmjs/stargate": "^0.28.13",
     "@crocswap/sdk": "^2.4.5",
-    "@ethersproject/experimental": "^5.3.0",
     "@ethersproject/abstract-provider": "5.7.0",
     "@ethersproject/address": "5.7.0",
     "@ethersproject/contracts": "5.7.0",
@@ -39,11 +38,11 @@
     "@pancakeswap/sdk": "^2.4.5",
     "@pangolindex/sdk": "^1.1.0",
     "@perp/sdk-curie": "^1.16.0",
-    "@project-serum/serum": "^0.13.65",
-    "@solana/buffer-layout": "^4.0.0",
-    "@solana/spl-token": "^0.2.0",
-    "@solana/spl-token-registry": "^0.2.4177",
-    "@solana/web3.js": "^1.46.0",
+    "@project-serum/serum": "0.13.65",
+    "@solana/buffer-layout": "4.0.0",
+    "@solana/spl-token": "0.2.0",
+    "@solana/spl-token-registry": "0.2.4177",
+    "@solana/web3.js": "1.46.0",
     "@sushiswap/sdk": "^5.0.0-canary.116",
     "@switchboard-xyz/defikingdoms-sdk": "^1.0.7",
     "@traderjoe-xyz/sdk": "^1.6.1",
@@ -60,25 +59,25 @@
     "@uniswap/v3-sdk": "^3.7.0",
     "@zuzu-cat/defira-sdk": "^1.0.0",
     "abi-decoder": "^2.4.0",
-    "add": "^2.0.6",
+    "add": "2.0.6",
     "ajv": "^8.6.3",
     "app-root-path": "^3.0.0",
     "axios": "^0.21.1",
     "big.js": "6.1.1",
     "bn.js": "^5.2.1",
     "body-parser": "^1.19.0",
-    "bs58": "^5.0.0",
+    "bs58": "5.0.0",
     "chalk": "^4.1.0",
     "coinalpha-ref-sdk": "1.1.0",
-    "cycle": "^1.0.3",
+    "cycle": "1.0.3",
     "dayjs": "^1.10.6",
     "decimal.js-light": "^2.5.1",
     "ethers": "^5.6.2",
     "express": "^4.17.1",
     "express-winston": "^4.1.0",
     "fs-extra": "^10.0.0",
-    "http-status-codes": "^2.2.0",
-    "immutable": "^4.0.0",
+    "http-status-codes": "2.2.0",
+    "immutable": "4.0.0",
     "js-yaml": "^4.1.0",
     "level": "^8.0.0",
     "lodash": "^4.17.21",
@@ -97,8 +96,8 @@
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",
     "yarn": "^1.22.17",
-    "@project-serum/serum-dev-tools": "^1.0.5",
-    "@pythnetwork/client": "^2.8.0"
+    "@project-serum/serum-dev-tools": "1.0.5",
+    "@pythnetwork/client": "2.8.0"
   },
   "devDependencies": {
     "@connectis/diff-test-coverage": "^1.5.1",
@@ -139,10 +138,10 @@
     "typescript": "^4.3.2"
   },
   "overrides": {
-    "@solana/web3.js": "^1.46.0"
+    "@solana/web3.js": "1.46.0"
   },
   "resolutions": {
-    "@solana/web3.js": "^1.46.0",
+    "@solana/web3.js": "1.46.0",
     "web3-utils": "1.7.3"
   }
 }
