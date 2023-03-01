@@ -19,6 +19,7 @@ import { EthereumBase } from '../chains/ethereum/ethereum-base';
 import { Cronos } from '../chains/cronos/cronos';
 import { Near } from '../chains/near/near';
 import { Nearish } from '../services/common-interfaces';
+import { XRPL, TrustlineInfo } from '../chains/xrpl/xrpl';
 
 export async function getStatus(
   req: StatusRequest
@@ -46,6 +47,8 @@ export async function getStatus(
       connections.push(Near.getInstance(req.network as string));
     } else if (req.chain === 'cronos') {
       connections.push(await Cronos.getInstance(req.network as string));
+    } else if (req.chain === 'xrpl') {
+      connections.push(XRPL.getInstance(req.network as string));
     } else {
       throw new HttpException(
         500,
@@ -88,6 +91,11 @@ export async function getStatus(
     connections = connections.concat(
       bscConnections ? Object.values(bscConnections) : []
     );
+
+    const xrplConnections = XRPL.getConnectedInstances();
+    connections = connections.concat(
+      xrplConnections ? Object.values(xrplConnections) : []
+    );
   }
 
   for (const connection of connections) {
@@ -117,8 +125,8 @@ export async function getStatus(
 }
 
 export async function getTokens(req: TokensRequest): Promise<TokensResponse> {
-  let connection: EthereumBase | Nearish;
-  let tokens: TokenInfo[] = [];
+  let connection: EthereumBase | Nearish | XRPL;
+  let tokens: (TokenInfo | TrustlineInfo)[] = [];
 
   if (req.chain && req.network) {
     if (req.chain === 'avalanche') {
@@ -135,6 +143,8 @@ export async function getTokens(req: TokensRequest): Promise<TokensResponse> {
       connection = Near.getInstance(req.network);
     } else if (req.chain === 'cronos') {
       connection = await Cronos.getInstance(req.network);
+    } else if (req.chain === 'xrpl') {
+      connection = XRPL.getInstance(req.network);
     } else {
       throw new HttpException(
         500,
@@ -156,10 +166,21 @@ export async function getTokens(req: TokensRequest): Promise<TokensResponse> {
 
   if (!req.tokenSymbols) {
     tokens = connection.storedTokenList;
-  } else {
+    return { tokens };
+  }
+
+  if (req.chain === `xrpl`) {
     for (const t of req.tokenSymbols as []) {
-      tokens.push(connection.getTokenForSymbol(t) as TokenInfo);
+      const trustlines = connection.getTokenForSymbol(t) as TrustlineInfo[];
+      for (const tl of trustlines) {
+        tokens.push(tl);
+      }
     }
+    return { tokens };
+  }
+
+  for (const t of req.tokenSymbols as []) {
+    tokens.push(connection.getTokenForSymbol(t) as TokenInfo);
   }
 
   return { tokens };

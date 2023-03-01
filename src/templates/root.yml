@@ -87,3 +87,7 @@ configurations:
   $namespace pancakeswap:
     configurationPath: pancakeswap.yml
     schemaPath: pangolin-schema.json
+
+  $namespace xrpl:
+    configurationPath: xrpl.yml
+    schemaPath: xrpl-schema.json

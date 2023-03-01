@@ -6,6 +6,10 @@ import {
   mkSelectingValidator,
 } from '../validators';
 const { fromBase64 } = require('@cosmjs/encoding');
+import {
+  invalidXRPLPrivateKeyError,
+  isXRPLSeedKey,
+} from '../../chains/xrpl/xrpl.validators';
 
 export const invalidEthPrivateKeyError: string =
   'The privateKey param is not a valid Ethereum private key (64 hexadecimal characters).';
@@ -82,6 +86,11 @@ export const validatePrivateKey: Validator = mkSelectingValidator(
       invalidEthPrivateKeyError,
       (val) => typeof val === 'string' && isEthPrivateKey(val)
     ),
+    xrpl: mkValidator(
+      'privateKey',
+      invalidXRPLPrivateKeyError,
+      (val) => typeof val === 'string' && isXRPLSeedKey(val)
+    ),
   }
 );
 
@@ -105,7 +114,8 @@ export const validateChain: Validator = mkValidator(
       val === 'harmony' ||
       val === 'cronos' ||
       val === 'cosmos' ||
-      val === 'binance-smart-chain')
+      val === 'binance-smart-chain' ||
+      val === 'xrpl')
 );
 
 export const validateNetwork: Validator = mkValidator(

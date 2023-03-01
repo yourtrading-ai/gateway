@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { NextFunction, Request, Response, Router } from 'express';
 import * as ethereumControllers from '../chains/ethereum/ethereum.controllers';
+import * as xrplControllers from '../chains/xrpl/xrpl.controllers';
 import { Ethereumish } from '../services/common-interfaces';
 import { ConfigManagerV2 } from '../services/config-manager-v2';
 import { getChain } from '../services/connection-manager';
@@ -26,6 +27,16 @@ import {
   validateChain as validateEthereumChain,
   validateNetwork as validateEthereumNetwork,
 } from '../chains/ethereum/ethereum.validators';
+import { XRPLish } from '../chains/xrpl/xrpl';
+import {
+  validateXRPLBalanceRequest,
+  validateXRPLPollRequest,
+} from '../chains/xrpl/xrpl.validators';
+import {
+  XRPLBalanceResponse,
+  XRPLPollRequest,
+  XRPLPollResponse,
+} from '../chains/xrpl/xrpl.requests';
 
 export const validatePollRequest: RequestValidator = mkRequestValidator([
   validateTxHash,
@@ -60,18 +71,39 @@ export namespace NetworkRoutes {
     asyncHandler(
       async (
         req: Request<{}, {}, BalanceRequest>,
-        res: Response<BalanceResponse | string, {}>,
+        res: Response<BalanceResponse | XRPLBalanceResponse | string, {}>,
         _next: NextFunction
       ) => {
-        validateEthereumBalanceRequest(req.body);
-        const chain = await getChain<Ethereumish>(
-          req.body.chain,
-          req.body.network
-        );
+        let chain: Ethereumish | XRPLish;
+        switch (req.body.chain) {
+          case 'xrpl':
+            validateXRPLBalanceRequest(req.body);
 
-        res
-          .status(200)
-          .json(await ethereumControllers.balances(chain, req.body));
+            chain = await getChain<XRPLish>(req.body.chain, req.body.network);
+            res
+              .status(200)
+              .json(
+                (await xrplControllers.balances(
+                  chain,
+                  req.body
+                )) as XRPLBalanceResponse
+              );
+
+            break;
+
+          default:
+            validateEthereumBalanceRequest(req.body);
+
+            chain = await getChain<Ethereumish>(
+              req.body.chain,
+              req.body.network
+            );
+
+            res
+              .status(200)
+              .json(await ethereumControllers.balances(chain, req.body));
+            break;
+        }
       }
     )
   );
@@ -80,17 +112,28 @@ export namespace NetworkRoutes {
     '/poll',
     asyncHandler(
       async (
-        req: Request<{}, {}, PollRequest>,
-        res: Response<PollResponse, {}>
+        req: Request<{}, {}, PollRequest | XRPLPollRequest>,
+        res: Response<PollResponse | XRPLPollResponse, {}>
       ) => {
-        validatePollRequest(req.body);
+        if (req.body.chain == 'xrpl') {
+          validateXRPLPollRequest(req.body);
 
-        const chain = await getChain<Ethereumish>(
-          req.body.chain,
-          req.body.network
-        );
+          const chain = await getChain<XRPLish>(
+            req.body.chain,
+            req.body.network
+          );
 
-        res.status(200).json(await ethereumControllers.poll(chain, req.body));
+          res.status(200).json(await xrplControllers.poll(chain, req.body));
+        } else {
+          validatePollRequest(req.body);
+
+          const chain = await getChain<Ethereumish>(
+            req.body.chain,
+            req.body.network
+          );
+
+          res.status(200).json(await ethereumControllers.poll(chain, req.body));
+        }
       }
     )
   );

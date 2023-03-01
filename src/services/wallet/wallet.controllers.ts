@@ -6,6 +6,7 @@ import { Ethereum } from '../../chains/ethereum/ethereum';
 import { Polygon } from '../../chains/polygon/polygon';
 import { Cosmos } from '../../chains/cosmos/cosmos';
 import { Harmony } from '../../chains/harmony/harmony';
+import { XRPL } from '../../chains/xrpl/xrpl';
 
 import {
   AddWalletRequest,
@@ -43,7 +44,7 @@ export async function addWallet(
   if (!passphrase) {
     throw new Error('There is no passphrase');
   }
-  let connection: EthereumBase | Near | Cosmos;
+  let connection: EthereumBase | Near | Cosmos | XRPL;
   let address: string | undefined;
   let encryptedPrivateKey: string | undefined;
 
@@ -59,6 +60,8 @@ export async function addWallet(
     connection = Polygon.getInstance(req.network);
   } else if (req.chain === 'cosmos') {
     connection = Cosmos.getInstance(req.network);
+  }  else if (req.chain === 'xrpl') {
+    connection = XRPL.getInstance(req.network);
   } else if (req.chain === 'near') {
     if (!('address' in req))
       throw new HttpException(
@@ -106,6 +109,12 @@ export async function addWallet(
         )
       ).accountId;
       encryptedPrivateKey = connection.encrypt(req.privateKey, passphrase);
+    } else if (connection instanceof XRPL) {
+      address = connection.getWalletFromSeed(req.privateKey).classicAddress;
+      encryptedPrivateKey = await connection.encrypt(
+        req.privateKey,
+        passphrase
+      );
     }
 
     if (address === undefined || encryptedPrivateKey === undefined) {
