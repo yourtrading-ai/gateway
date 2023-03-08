@@ -1,6 +1,4 @@
 swagger: '2.0'
-# TODO: Please verify if all clob-beta routes are compatible with Serum, if not please mark them and propose new changes
-# TODO: Once the schema is final, move paths to clob-routes.yml and Merge definitions to definitions.yml
 
 info:
   description: 'Gateway allows clients to interoperate with blockchains and DeFi protocols via a REST API. This allows for a language agnostic way to use official SDKs for blockchains.'
@@ -15,7 +13,7 @@ info:
 host: 'localhost:15888'
 
 tags:
-  - name: 'clob-beta'
+  - name: 'clob'
     description: 'Interact with CLOB decentralized exchanges (BETA)'
 
 schemes:
@@ -27,10 +25,10 @@ externalDocs:
 
 
 paths:
-  /clob-beta:
+  /clob:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Verify Clob Routes Status'
       description: 'Verify if the Clob routes are ready to use and show some other useful information. '
       operationId: 'clob.root'
@@ -52,10 +50,10 @@ paths:
           schema:
             $ref: '#/definitions/CLOBRootResponse'
 
-  /clob-beta/markets:
+  /clob/markets:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Get One or More Markets'
       description: 'Get the information of one, several or all available markets. Depending on the connector kind, response body might be different.'
       operationId: 'clob.markets'
@@ -78,10 +76,10 @@ paths:
         '404':
           description: 'Not found response.'
 
-  /clob-beta/orderBooks:
+  /clob/orderBooks:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Get One or More Order Books'
       description: 'Get the information of one, several or all available order books. Depending on the connector kind, response body might be different.'
       operationId: 'clob.orderBooks'
@@ -104,10 +102,10 @@ paths:
         '404':
           description: 'Not found response.'
 
-  /clob-beta/tickers:
+  /clob/tickers:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Get middle price ticker for requested market'
       operationId: 'tickers'
       consumes:
@@ -129,10 +127,10 @@ paths:
         '404':
           description: 'Not found response.'
 
-  /clob-beta/orders:
+  /clob/orders:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Get status details of one or more orders'
       operationId: 'getOrders'
       consumes:
@@ -155,7 +153,7 @@ paths:
           description: 'Not found response.'
     post:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Create one or more orders'
       description: 'Create one or more orders.'
       operationId: 'createOrders'
@@ -179,7 +177,7 @@ paths:
           description: 'Bad request response.'
     delete:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Cancel one or more orders'
       description: 'Cancel one or more orders.'
       operationId: 'cancelOrders'
@@ -202,10 +200,10 @@ paths:
         '400':
           description: 'Bad request response.'
 
-  /clob-beta/orders/open:
+  /clob/orders/open:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Get One Or More Open Orders'
       description: 'Get the information of one, several or all open orders.'
       operationId: 'clob.getOpenOrders'
@@ -230,10 +228,10 @@ paths:
         '404':
           description: 'Not found response.'
 
-  /clob-beta/orders/filled:
+  /clob/orders/filled:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Get One Or More Filled Orders'
       description: 'Get the information of one, several or all filled orders.'
       operationId: 'clob.getFilledOrders'
@@ -258,10 +256,10 @@ paths:
         '404':
           description: 'Not found response.'
 
-  /clob-beta/settleFunds:
+  /clob/settleFunds:
     get:
       tags:
-        - 'clob-beta'
+        - 'clob'
       summary: 'Settle Funds of One or More Markets'
       description: 'Settle funds of one, several or all markets.'
       operationId: 'clob.settleFunds'
@@ -289,7 +287,7 @@ paths:
 
 definitions:
   CLOBRootRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -305,7 +303,7 @@ definitions:
         type: string
         example: serum
   CLOBRootResponse:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -330,7 +328,7 @@ definitions:
         example: 1652304454740
 
   CLOBGetMarketsRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -345,20 +343,18 @@ definitions:
       connector:
         type: string
         example: serum
-      name:
+      id:
         type: string
         example: 'SOL/USDT'
-      names:
+      ids:
         type: array
-        items:
-          type: string
-          example:
-            - 'SOL/USDT'
-            - 'SOL/USDC'
+        example:
+          - 'SOL/USDT'
+          - 'SOL/USDC'
   CLOBGetMarketsResponseItemCommon:
     type: object
     properties:
-      name:
+      id:
         type: string
         example: SOL/USDT
       deprecated:
@@ -391,7 +387,7 @@ definitions:
       - type: object
       - $ref: '#/definitions/CLOBGetMarketsResponseItemCommon'
     properties:
-      name:
+      id:
         type: string
         example: USD.rh8LssQyeBdEXk7Zv86HxHrx8k2R2DBUrx/VND.rh8LssQyeBdEXk7Zv86HxHrx8k2R2DBUrx
       baseTransferRate:
@@ -409,7 +405,7 @@ definitions:
         $ref: '#/definitions/CLOBGetMarketrResponseItemXRPLDEX'
 
   CLOBGetOrderBooksRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -424,16 +420,14 @@ definitions:
       connector:
         type: string
         example: serum
-      marketName:
+      marketId:
         type: string
         example: 'SOL/USDT'
-      marketNames:
+      marketIds:
         type: array
-        items:
-          type: string
-          example:
-            - 'SOL/USDT'
-            - 'SOL/USDC'
+        example:
+          - 'SOL/USDT'
+          - 'SOL/USDC'
   CLOBGetOrderBooksResponseItemCommon:
     type: object
     properties:
@@ -505,7 +499,7 @@ definitions:
       id:
         type: string
         example: 35332426
-      marketName:
+      marketId:
         type: string
         example: SOL/USDT
       ownerAddress:
@@ -532,7 +526,7 @@ definitions:
       id:
         type: string
         example: 35332426
-      marketName:
+      marketId:
         type: string
         example: SOL/USDT
       ownerAddress:
@@ -562,7 +556,7 @@ definitions:
         $ref: '#/definitions/CLOBGetOrderBooksResponseItemXRPLDEX'
 
   CLOBGetTickersRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -577,16 +571,14 @@ definitions:
       connector:
         type: string
         example: serum
-      marketName:
+      marketId:
         type: string
         example: 'SOL/USDT'
-      marketNames:
+      marketIds:
         type: array
-        items:
-          type: string
-          example:
-            - 'SOL/USDT'
-            - 'SOL/USDC'
+        example:
+          - 'SOL/USDT'
+          - 'SOL/USDC'
   CLOBGetTickersResponseItem:
     type: object
     properties:
@@ -605,7 +597,7 @@ definitions:
         $ref: '#/definitions/CLOBGetTickersResponseItem'
 
   CLOBGetOrdersRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -628,10 +620,10 @@ definitions:
           id:
             type: string
             example: 123456789
-          exchangeId:
+          exchangeOrderId:
             type: string
             example: 184467256269654779094895731
-          marketName:
+          marketId:
             type: string
             example: SOL/USDT
           ownerAddress:
@@ -648,35 +640,35 @@ definitions:
               type: array
               items:
                 type: string
-            exchangeIds:
+            exchangeOrderIds:
               type: array
               items:
                 type: string
-            marketName:
+            marketId:
               type: string
             ownerAddress:
               type: string
         example:
           - ids: ["123456789"]
-            exchangeIds: ["184467256269654779094895731"]
-            marketName: SOL/USDT
+            exchangeOrderIds: ["184467256269654779094895731"]
+            marketId: SOL/USDT
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["123456789"]
-            exchangeIds: ["184467256269654779094895731"]
-            marketName: SOL/USDC
+            exchangeOrderIds: ["184467256269654779094895731"]
+            marketId: SOL/USDC
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["1112234"]
-            exchangeIds: ["33485803"]
-            marketName: XRP/USDT
+            exchangeOrderIds: ["33485803"]
+            marketId: XRP/USDT
             ownerAddress: r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV
   CLOBGetOrdersResponseItemCommon:
-    type: 'object'
+    type: object
     properties:
       id:
         type: string
-      exchangeId:
+      exchangeOrderId:
         type: string
-      marketName:
+      marketId:
         type: string
       ownderAddress:
         type: string
@@ -694,8 +686,8 @@ definitions:
         type: number
     example:
       id: "123456789"
-      exchangeId: "184467256269654779094895731"
-      marketName: "SOL/USDT"
+      exchangeOrderId: "184467256269654779094895731"
+      marketId: "SOL/USDT"
       ownderAddress: "2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa"
       side: "BUY"
       price: 999.99
@@ -704,7 +696,7 @@ definitions:
       status: "OPEN"
       fee: 0.1
   CLOBGetOrdersResponseItemXRPLDEX:
-    type: 'object'
+    type: object
     allOf:
       - type: object
       - $ref: '#/definitions/CLOBGetOrdersResponseItemCommon'
@@ -717,8 +709,8 @@ definitions:
         type: string
     example:
       id: "1112234"
-      exchangeId: "33485803"
-      marketName: "XRP/USDT"
+      exchangeOrderId: "33485803"
+      marketId: "XRP/USDT"
       ownderAddress: "r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV"
       side: "BUY"
       price: 999.99
@@ -750,7 +742,7 @@ definitions:
             $ref: '#/definitions/CLOBGetOrdersResponseItemXRPLDEX'
 
   CLOBPostCreateOrdersRequestCommon:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -779,7 +771,7 @@ definitions:
           id:
             type: string
             example: 123456789
-          marketName:
+          marketId:
             type: string
             example: SOL/USDT
           ownerAddress:
@@ -813,7 +805,7 @@ definitions:
             id:
               type: string
               example: 123456789
-            marketName:
+            marketId:
               type: string
               example: SOL/USDT
             ownerAddress:
@@ -872,10 +864,10 @@ definitions:
       id:
         type: string
         example: 123456789
-      exchangeId:
+      exchangeOrderId:
         type: string
         example: 184467256269654779094895731
-      marketName:
+      marketId:
         type: string
         example: SOL/USDT
       ownerAddress:
@@ -925,8 +917,8 @@ definitions:
           - $ref: '#/definitions/CLOBPostCreateOrdersResponseItemXRPLDEX'
         example:
           id: "1112234"
-          exchangeId: "33485803"
-          marketName: "XRP/USDT"
+          exchangeOrderId: "33485803"
+          marketId: "XRP/USDT"
           ownderAddress: "r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV"
           side: "BUY"
           price: 999.99
@@ -938,7 +930,7 @@ definitions:
           orderLedgerIndex: "35357471"
 
   CLOBDeleteOrdersRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -961,10 +953,10 @@ definitions:
           id:
             type: string
             example: 123456789
-          exchangeId:
+          exchangeOrderId:
             type: string
             example: 184467256269654779094895731
-          marketName:
+          marketId:
             type: string
             example: SOL/USDT
           ownerAddress:
@@ -981,35 +973,35 @@ definitions:
               type: array
               items:
                 type: string
-            exchangeIds:
+            exchangeOrderIds:
               type: array
               items:
                 type: string
-            marketName:
+            marketId:
               type: string
             ownerAddress:
               type: string
         example:
           - ids: ["123456789", "123456789"]
-            exchangeIds: ["184467256269654779094895731", "284467256269654779094895723"]
-            marketName: SOL/USDT
+            exchangeOrderIds: ["184467256269654779094895731", "284467256269654779094895723"]
+            marketId: SOL/USDT
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["123456789", "123456789"]
-            exchangeIds: ["184467256269654779094895731", "284467256269654779094895723"]
-            marketName: SOL/USDC
+            exchangeOrderIds: ["184467256269654779094895731", "284467256269654779094895723"]
+            marketId: SOL/USDC
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["1112234"]
-            exchangeIds: ["33485803"]
-            marketName: XRP/USDT
+            exchangeOrderIds: ["33485803"]
+            marketId: XRP/USDT
             ownerAddress: r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV
   CLOBDeleteOrdersResponseItemCommon:
-    type: 'object'
+    type: object
     properties:
       id:
         type: string
-      exchangeId:
+      exchangeOrderId:
         type: string
-      marketName:
+      marketId:
         type: string
       ownderAddress:
         type: string
@@ -1027,8 +1019,8 @@ definitions:
         type: number
     example:
       id: "123456789"
-      exchangeId: "184467256269654779094895731"
-      marketName: "SOL/USDT"
+      exchangeOrderId: "184467256269654779094895731"
+      marketId: "SOL/USDT"
       ownderAddress: "2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa"
       side: "BUY"
       price: 999.99
@@ -1037,7 +1029,7 @@ definitions:
       status: "CANCELED"
       fee: 0.1
   CLOBDeleteOrdersResponseItemXRPLDEX:
-    type: 'object'
+    type: object
     allOf:
       - type: object
       - $ref: '#/definitions/CLOBDeleteOrdersResponseItemCommon'
@@ -1050,8 +1042,8 @@ definitions:
         type: string
     example:
       id: "1112234"
-      exchangeId: "33485803"
-      marketName: "XRP/USDT"
+      exchangeOrderId: "33485803"
+      marketId: "XRP/USDT"
       ownderAddress: "r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV"
       side: "BUY"
       price: 999.99
@@ -1083,7 +1075,7 @@ definitions:
             $ref: '#/definitions/CLOBDeleteOrdersResponseItemXRPLDEX'
 
   CLOBGetOpenOrdersRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -1106,10 +1098,10 @@ definitions:
           id:
             type: string
             example: 123456789
-          exchangeId:
+          exchangeOrderId:
             type: string
             example: 184467256269654779094895731
-          marketName:
+          marketId:
             type: string
             example: SOL/USDT
           ownerAddress:
@@ -1126,35 +1118,35 @@ definitions:
               type: array
               items:
                 type: string
-            exchangeIds:
+            exchangeOrderIds:
               type: array
               items:
                 type: string
-            marketName:
+            marketId:
               type: string
             ownerAddress:
               type: string
         example:
           - ids: ["123456789", "987654321"]
-            exchangeIds: ["184467256269654779094895731", "284467256269654779094895723"]
-            marketName: SOL/USDT
+            exchangeOrderIds: ["184467256269654779094895731", "284467256269654779094895723"]
+            marketId: SOL/USDT
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["123456789", "987654321"]
-            exchangeIds: ["184467256269654779094895731", "284467256269654779094895723"]
-            marketName: SOL/USDC
+            exchangeOrderIds: ["184467256269654779094895731", "284467256269654779094895723"]
+            marketId: SOL/USDC
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["1112234", "6783991"]
-            exchangeIds: ["33485803", "33485000"]
-            marketName: XRP/USDT
+            exchangeOrderIds: ["33485803", "33485000"]
+            marketId: XRP/USDT
             ownerAddress: r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV
   CLOBGetOpenOrdersResponseItemCommon:
-    type: 'object'
+    type: object
     properties:
       id:
         type: string
-      exchangeId:
+      exchangeOrderId:
         type: string
-      marketName:
+      marketId:
         type: string
       ownderAddress:
         type: string
@@ -1172,8 +1164,8 @@ definitions:
         type: number
     example:
       id: "123456789"
-      exchangeId: "184467256269654779094895731"
-      marketName: "SOL/USDT"
+      exchangeOrderId: "184467256269654779094895731"
+      marketId: "SOL/USDT"
       ownderAddress: "2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa"
       side: "BUY"
       price: 999.99
@@ -1182,7 +1174,7 @@ definitions:
       status: "OPEN"
       fee: 0.1
   CLOBGetOpenOrdersResponseItemXRPLDEX:
-    type: 'object'
+    type: object
     allOf:
       - type: object
       - $ref: '#/definitions/CLOBGetOpenOrdersResponseItemCommon'
@@ -1195,8 +1187,8 @@ definitions:
         type: string
     example:
       id: "1112234"
-      exchangeId: "33485803"
-      marketName: "XRP/USDT"
+      exchangeOrderId: "33485803"
+      marketId: "XRP/USDT"
       ownderAddress: "r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV"
       side: "BUY"
       price: 999.99
@@ -1228,7 +1220,7 @@ definitions:
             $ref: '#/definitions/CLOBGetOpenOrdersResponseItemXRPLDEX'
 
   CLOBGetFilledOrdersRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -1251,10 +1243,10 @@ definitions:
           id:
             type: string
             example: 123456789
-          exchangeId:
+          exchangeOrderId:
             type: string
             example: 184467256269654779094895731
-          marketName:
+          marketId:
             type: string
             example: SOL/USDT
           ownerAddress:
@@ -1271,35 +1263,35 @@ definitions:
               type: array
               items:
                 type: string
-            exchangeIds:
+            exchangeOrderIds:
               type: array
               items:
                 type: string
-            marketName:
+            marketId:
               type: string
             ownerAddress:
               type: string
         example:
           - ids: ["123456789", "987654321"]
-            exchangeIds: ["184467256269654779094895731", "284467256269654779094895723"]
-            marketName: SOL/USDT
+            exchangeOrderIds: ["184467256269654779094895731", "284467256269654779094895723"]
+            marketId: SOL/USDT
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["123456789", "987654321"]
-            exchangeIds: ["184467256269654779094895731", "284467256269654779094895723"]
-            marketName: SOL/USDC
+            exchangeOrderIds: ["184467256269654779094895731", "284467256269654779094895723"]
+            marketId: SOL/USDC
             ownerAddress: 2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa
           - ids: ["1112234", "6783991"]
-            exchangeIds: ["33485803", "33485000"]
-            marketName: XRP/USDT
+            exchangeOrderIds: ["33485803", "33485000"]
+            marketId: XRP/USDT
             ownerAddress: r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV
   CLOBGetFilledOrdersResponseItemCommon:
-    type: 'object'
+    type: object
     properties:
       id:
         type: string
-      exchangeId:
+      exchangeOrderId:
         type: string
-      marketName:
+      marketId:
         type: string
       ownderAddress:
         type: string
@@ -1317,8 +1309,8 @@ definitions:
         type: number
     example:
       id: "123456789"
-      exchangeId: "184467256269654779094895731"
-      marketName: "SOL/USDT"
+      exchangeOrderId: "184467256269654779094895731"
+      marketId: "SOL/USDT"
       ownderAddress: "2wvayrdTmrJFUAdg0yHoBtPu1eE41t0fxruxTh7ufnJa"
       side: "BUY"
       price: 999.99
@@ -1327,7 +1319,7 @@ definitions:
       status: "FILLED"
       fee: 0.1
   CLOBGetFilledOrdersResponseItemXRPLDEX:
-    type: 'object'
+    type: object
     allOf:
       - type: object
       - $ref: '#/definitions/CLOBGetFilledOrdersResponseItemCommon'
@@ -1340,8 +1332,8 @@ definitions:
         type: string
     example:
       id: "1112234"
-      exchangeId: "33485803"
-      marketName: "XRP/USDT"
+      exchangeOrderId: "33485803"
+      marketId: "XRP/USDT"
       ownderAddress: "r3z4R6KQWfwRf9G15AhUZe2GN67Sj6PYNV"
       side: "BUY"
       price: 999.99
@@ -1373,7 +1365,7 @@ definitions:
             $ref: '#/definitions/CLOBGetFilledOrdersResponseItemXRPLDEX'
 
   CLOBPostSettleFundsRequest:
-    type: 'object'
+    type: object
     required:
       - 'chain'
       - 'network'
@@ -1389,16 +1381,14 @@ definitions:
       connector:
         type: string
         example: serum
-      marketName:
+      marketId:
         type: string
         example: SOL/USDT
-      marketNames:
+      marketIds:
         type: array
-        items:
-          type: string
-          example:
-            - SOL/USDT
-            - BTC/USDT
+        example:
+          - SOL/USDT
+          - BTC/USDT
   CLOBPostSettleFundsResponse:
     type: object
     properties:
@@ -1414,3 +1404,4 @@ definitions:
           type: string
         example:
           - 4vAstoT7dgJ3LaexYRQbJ4HwbV8vPaMEUWVP3o89oq4vJcn9E11LJHyEpoc3sZ4dxmAtZGU7YyRS1uR36wuUEQMK
+
