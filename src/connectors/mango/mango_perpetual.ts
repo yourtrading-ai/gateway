@@ -30,6 +30,10 @@ import { MangoConfig } from './mango.config';
 // - DerivativeTrade
 // - DerivativeOrderHistory
 // - TradeDirection
+// - OrderType
+
+// TODO: Investigate what methods we should add in order to manage
+//       isolated margin accounts
 
 function enumFromStringValue<T>(
   enm: { [s: string]: T },
