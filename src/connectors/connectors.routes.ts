@@ -21,6 +21,7 @@ import { ConnectorsResponse } from './connectors.request';
 import { DexalotCLOBConfig } from './dexalot/dexalot.clob.config';
 import { ZigZagConfig } from './zigzag/zigzag.config';
 import { TinymanConfig } from './tinyman/tinyman.config';
+import { MangoConfig } from './mango/mango.config';
 
 export namespace ConnectorsRoutes {
   export const router = Router();
@@ -164,6 +165,12 @@ export namespace ConnectorsRoutes {
             trading_type: TinymanConfig.config.tradingTypes,
             chain_type: TinymanConfig.config.chainType,
             available_networks: TinymanConfig.config.availableNetworks,
+          },
+          {
+            name: 'mango_perpetual',
+            trading_type: MangoConfig.config.tradingTypes('perp'),
+            chain_type: MangoConfig.config.chainType,
+            available_networks: MangoConfig.config.availableNetworks,
           },
         ],
       });
