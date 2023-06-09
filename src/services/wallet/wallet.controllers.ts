@@ -2,6 +2,7 @@ import fse from 'fs-extra';
 import { Xdc } from '../../chains/xdc/xdc';
 import { Cosmos } from '../../chains/cosmos/cosmos';
 import { Injective } from '../../chains/injective/injective';
+// TODO: Add solana to wallet service
 
 import {
   AddWalletRequest,

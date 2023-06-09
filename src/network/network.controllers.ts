@@ -21,6 +21,7 @@ import { Cronos } from '../chains/cronos/cronos';
 import { Near } from '../chains/near/near';
 import { Nearish, Xdcish } from '../services/common-interfaces';
 import { Algorand } from '../chains/algorand/algorand';
+import { Solana } from '../chains/solana/solana';
 import {
   getInitializedChain,
   UnsupportedChainException,
@@ -100,6 +101,11 @@ export async function getStatus(
     const injectiveConnections = Injective.getConnectedInstances();
     connections = connections.concat(
       injectiveConnections ? Object.values(injectiveConnections) : []
+    );
+
+    const solanaConnections = Solana.getConnectedInstances();
+    connections = connections.concat(
+      solanaConnections ? Object.values(injectiveConnections) : []
     );
   }
 

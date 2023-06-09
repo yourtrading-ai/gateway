@@ -39,6 +39,7 @@ import { DexalotCLOB } from '../connectors/dexalot/dexalot';
 import { Algorand } from '../chains/algorand/algorand';
 import { Cosmos } from '../chains/cosmos/cosmos';
 import { Tinyman } from '../connectors/tinyman/tinyman';
+import { Solana } from '../chains/solana/solana';
 
 export type ChainUnion =
   | Algorand
@@ -46,7 +47,8 @@ export type ChainUnion =
   | Ethereumish
   | Nearish
   | Injective
-  | Xdcish;
+  | Xdcish
+  | Solana;
 
 export type Chain<T> = T extends Algorand
   ? Algorand
@@ -60,6 +62,8 @@ export type Chain<T> = T extends Algorand
   ? Xdcish
   : T extends Injective
   ? Injective
+  : T extends Solana
+  ? Solana
   : never;
 
 export class UnsupportedChainException extends Error {
@@ -119,6 +123,8 @@ export function getChainInstance(
     connection = Xdc.getInstance(network);
   } else if (chain === 'injective') {
     connection = Injective.getInstance(network);
+  } else if (chain === 'solana') {
+    connection = Solana.getInstance(network);
   } else {
     connection = undefined;
   }
