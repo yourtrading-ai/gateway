@@ -59,7 +59,7 @@ export class MangoClobPerp {
 
   public static getInstance(chain: string, network: string): MangoClobPerp {
     if (MangoClobPerp._instances === undefined) {
-      const config = getSolanaConfig(network);
+      const config = getSolanaConfig(chain, network);
       MangoClobPerp._instances = new LRUCache<string, MangoClobPerp>({
         max: config.network.maxLRUCacheInstances,
       });

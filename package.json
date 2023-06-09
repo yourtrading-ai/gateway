@@ -97,7 +97,8 @@
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",
     "xsswap-sdk": "^1.0.1",
-    "yarn": "^1.22.17"
+    "yarn": "^1.22.17",
+    "mango-v4": "git+https://github.com/blockworks-foundation/mango-v4.git#dev"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0-0",

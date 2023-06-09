@@ -3,6 +3,7 @@ import { ConfigManagerV2 } from '../../services/config-manager-v2';
 export interface NetworkConfig {
   name: string;
   nodeUrl: string;
+  maxLRUCacheInstances: number;
 }
 
 export interface TokenConfig {
@@ -30,6 +31,9 @@ export function getSolanaConfig(
       name: networkName,
       nodeUrl: configManager.get(
         chainName + '.networks.' + networkName + '.nodeURL'
+      ),
+      maxLRUCacheInstances: configManager.get(
+        chainName + '.networks.' + networkName + '.maxLRUCacheInstances'
       ),
     },
     nativeCurrencySymbol: configManager.get(

@@ -10,7 +10,8 @@
           "type": "object",
           "properties": {
             "nodeURL": { "type": "string" },
-            "nativeCurrencySymbol": { "type": "string" }
+            "nativeCurrencySymbol": { "type": "string" },
+            "maxLRUCacheInstances": { "type": "integer" }
           },
           "required": ["nodeURL", "nativeCurrencySymbol"],
           "additionalProperties": false

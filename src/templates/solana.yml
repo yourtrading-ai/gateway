@@ -5,12 +5,15 @@ networks:
 #    nodeURL: https://solana-api.projectserum.com
 #    nodeURL: https://solana-api.syndica.io/access-token/<access token>/rpc
     nativeCurrencySymbol: SOL
+    maxLRUCacheInstances: 10
   testnet:
     nodeURL: https://api.testnet.solana.com
     nativeCurrencySymbol: SOL
+    maxLRUCacheInstances: 10
   devnet:
     nodeURL: https://rpc.ankr.com/solana_devnet
     nativeCurrencySymbol: SOL
+    maxLRUCacheInstances: 10
 retry:
   all:
     maxNumberOfRetries: 3 # 0 means no retries
