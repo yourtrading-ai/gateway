@@ -1,6 +1,5 @@
 import { BigNumber, utils } from 'ethers';
 import LRUCache from 'lru-cache';
-import { OrderSide } from '@injectivelabs/networks/node_modules/@injectivelabs/ts-types/dist/cjs/trade';
 import { Solana } from '../../chains/solana/solana'; // TODO: Add solana chain
 import { getSolanaConfig } from '../../chains/solana/solana.config'; // TODO: Add solana chain config
 import {
@@ -19,10 +18,11 @@ import {
   PerpClobGetLastTradePriceRequest,
   PerpClobBatchUpdateRequest,
   ClobDeleteOrderRequestExtract,
-  CreatePerpOrderParam,
+  CreatePerpOrderParam, Orderbook,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
+import { MangoClient, PerpMarket, Group, PerpOrderSide } from '@blockworks-foundation/mango-v4';
 
 // TODO: Add these types
 // - Orderbook
@@ -46,14 +46,18 @@ function enumFromStringValue<T>(
 
 export class MangoClobPerp {
   private static _instances: LRUCache<string, MangoClobPerp>;
-  private _chain;
-  public conf;
+  private _chain: Solana;
+  private _client: MangoClient;
+  public defaultGroup: Group;
+  public conf: MangoConfig.NetworkConfig;
 
   private _ready: boolean = false;
   public parsedMarkets: PerpClobMarkets = {};
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
+    this._client = MangoClient.connectDefault(this._chain.rpcUrl);
+    this.defaultGroup = MangoConfig.defaultGroup;
     this.conf = MangoConfig.config;
   }
 
@@ -75,18 +79,21 @@ export class MangoClobPerp {
     return MangoClobPerp._instances.get(instanceKey) as MangoClobPerp;
   }
 
-  public async loadMarkets() {
-    const derivativeMarkets = []; // TODO: Add function to get derivative markets
+  public async loadMarkets(group: Group) {
+    // @note: Mango allows for groups that include a selection of markets in one cross-margin basket,
+    //        but we are only supporting one market per group for now. You can change the group in the
+    //        config file (mango.defaultGroup)
+    const derivativeMarkets = await this._client.perpGetMarkets(group);
     for (const market of derivativeMarkets) {
-      const key = market.ticker.replace('/', '-').replace(' PERP', '');
-      this.parsedMarkets[key] = <PerpetualMarket>market; // TODO: Add PerpetualMarket type
+      const key = market.name.replace(' PERP', 'USDC');
+      this.parsedMarkets[key] = market;
     }
   }
 
   public async init() {
     if (!this._chain.ready() || Object.keys(this.parsedMarkets).length === 0) {
       await this._chain.init();
-      await this.loadMarkets();
+      await this.loadMarkets(this.defaultGroup);
       this._ready = true;
     }
   }
@@ -108,9 +115,12 @@ export class MangoClobPerp {
   }
 
   public async orderBook(req: PerpClobOrderbookRequest): Promise<Orderbook> {
-    // TODO: Add Orderbook type
-    // TODO: Add getOrderBook method
-    return await getOrderBook(this.parsedMarkets[req.market].marketId);
+    const resp = await this.markets(this.parsedMarkets[req.market].marketId);
+    const market = resp.markets[req.market];
+    return {
+      buys: market.bids,
+      sells: market.asks,
+    };
   }
 
   public async ticker(

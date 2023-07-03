@@ -23,6 +23,8 @@
     "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts"
   },
   "dependencies": {
+    "@blockworks-foundation/mango-v4": "^0.16.12",
+    "@coral-xyz/anchor": "^0.28.1-beta.1",
     "@cosmjs/proto-signing": "^0.28.10",
     "@cosmjs/stargate": "^0.28.13",
     "@crocswap/sdk": "^2.4.5",
@@ -97,8 +99,7 @@
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",
     "xsswap-sdk": "^1.0.1",
-    "yarn": "^1.22.17",
-    "mango-v4": "git+https://github.com/blockworks-foundation/mango-v4.git#dev"
+    "yarn": "^1.22.17"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0-0",

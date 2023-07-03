@@ -1,13 +1,17 @@
 import {
   DerivativeTrade,
   FundingPayment,
-  Orderbook,
-  PerpetualMarket,
   Position,
+  PriceLevel,
 } from '@injectivelabs/sdk-ts';
 import { OrderType, Side } from '../amm/amm.requests';
 import { NetworkSelectionRequest } from '../services/common-interfaces';
+import { BookSide, PerpPosition } from '@blockworks-foundation/mango-v4';
 
+export interface Orderbook {
+  buys: PriceLevel[] | BookSide;
+  sells: PriceLevel[] | BookSide;
+}
 export interface ClobMarketsRequest extends NetworkSelectionRequest {
   market?: string;
 }
@@ -99,7 +103,7 @@ export type ClobDeleteOrderResponse = ClobPostOrderResponse;
 export type PerpClobMarketRequest = ClobMarketsRequest;
 
 export interface PerpClobMarkets {
-  [key: string]: PerpetualMarket;
+  [key: string]: any;
 }
 
 export interface PerpClobMarketResponse {
@@ -238,5 +242,5 @@ export interface PerpClobPositionResponse {
   network: string;
   timestamp: number;
   latency: number;
-  positions: Array<Position>;
+  positions: Array<Position> | Array<PerpPosition>;
 }
