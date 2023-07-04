@@ -1,4 +1,4 @@
-import { BigNumber, utils } from 'ethers';
+import BN from 'bn.js';
 import LRUCache from 'lru-cache';
 import { Solana } from '../../chains/solana/solana'; // TODO: Add solana chain
 import { getSolanaConfig } from '../../chains/solana/solana.config'; // TODO: Add solana chain config
@@ -18,12 +18,19 @@ import {
   PerpClobGetLastTradePriceRequest,
   PerpClobBatchUpdateRequest,
   ClobDeleteOrderRequestExtract,
-  CreatePerpOrderParam, Orderbook,
+  CreatePerpOrderParam,
+  Orderbook,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
-import {MangoClient, PerpMarket, Group, BookSide, FillEvent} from '@blockworks-foundation/mango-v4';
-import {PerpMarketFills} from "./mango.types";
+import {
+  MangoClient,
+  PerpMarket,
+  Group,
+  BookSide,
+  FillEvent,
+} from '@blockworks-foundation/mango-v4';
+import { PerpMarketFills } from './mango.types';
 
 // TODO: Add these types
 // - Orderbook
@@ -131,6 +138,7 @@ export class MangoClobPerp {
   }
 
   private async loadFills(market: PerpMarket): Promise<PerpMarketFills> {
+    //@todo: Find out where to get indexed, long-term historic fills & trades
     return {
       marketName: market.name,
       fills: await market.loadFills(this._client),
@@ -235,23 +243,16 @@ export class MangoClobPerp {
     }
   }
 
-  // TODO: Check if Mango use BigNumber
   public static calculateMargin(
     price: string,
     quantity: string,
-    decimals: number,
     leverage: number
-  ): BigNumber {
+  ): BN {
     // margin = (price * quantity) / leverage
-    const priceBig = utils.parseUnits(price, decimals);
-    const quantityBig = utils.parseUnits(quantity, decimals);
-    const leverageBig = utils.parseUnits(leverage.toString(), decimals);
-    const decimalsBig = BigNumber.from(10).pow(decimals);
+    const priceBig = new BN(price);
+    const quantityBig = new BN(quantity);
 
-    const numerator = priceBig.mul(quantityBig).mul(decimalsBig);
-    const denominator = leverageBig.mul(decimalsBig);
-
-    return numerator.div(denominator);
+    return priceBig.mul(quantityBig).divn(leverage);
   }
 
   // TODO: Review this method
@@ -275,7 +276,6 @@ export class MangoClobPerp {
     return this.orderUpdate(req);
   }
 
-  // TODO: Review this method
   public estimateGas(_req: NetworkSelectionRequest): {
     gasPrice: number;
     gasPriceToken: string;
@@ -288,12 +288,6 @@ export class MangoClobPerp {
       gasLimit: this.conf.gasLimitEstimate,
       gasCost: this._chain.gasPrice * this.conf.gasLimitEstimate,
     };
-  }
-
-  private _getNextHourUnixTimestamp(): number {
-    // Returns the next hour unix timestamp in seconds.
-    const now = Date.now() * 1e-3;
-    return (now - (now % 3600) + 3600) * 1e3;
   }
 
   public async fundingInfo(
