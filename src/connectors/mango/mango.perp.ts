@@ -29,8 +29,10 @@ import {
   Group,
   BookSide,
   FillEvent,
+  MangoAccount,
 } from '@blockworks-foundation/mango-v4';
 import { PerpMarketFills } from './mango.types';
+import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
 
 // TODO: Add these types
 // - Orderbook
@@ -54,16 +56,20 @@ function enumFromStringValue<T>(
 
 export class MangoClobPerp {
   private static _instances: LRUCache<string, MangoClobPerp>;
-  private _chain: Solana;
-  private _client: MangoClient;
+  private readonly _chain: Solana;
+  private readonly _client: MangoClient;
   public defaultGroup: Group;
   public conf: MangoConfig.NetworkConfig;
 
   private _ready: boolean = false;
   public parsedMarkets: PerpClobMarkets<PerpMarket> = {};
+  // @note: Contains all MangoAccounts, grouped by owner address and base asset
+  public mangoAccounts: Record<string, Record<string, Array<MangoAccount>>> =
+    {};
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
+    // @todo: See how to handle multiple Keypairs
     this._client = MangoClient.connectDefault(this._chain.rpcUrl);
     this.defaultGroup = MangoConfig.defaultGroup;
     this.conf = MangoConfig.config;
@@ -108,6 +114,19 @@ export class MangoClobPerp {
 
   public ready(): boolean {
     return this._ready;
+  }
+
+  private async getProvider(address: string): Promise<AnchorProvider> {
+    /**
+     * Returns a context object for sending transactions with a stored wallet.
+     */
+    const wallet = new Wallet(await this._chain.getKeypair(address));
+    return new AnchorProvider(this._chain.connection, wallet, {
+      commitment: 'confirmed',
+      maxRetries: 3,
+      preflightCommitment: 'confirmed',
+      skipPreflight: false,
+    });
   }
 
   public async markets(
@@ -301,7 +320,7 @@ export class MangoClobPerp {
   public async fundingPayments(
     req: PerpClobFundingPaymentsRequest
   ): Promise<Array<FundingPayment>> {
-    // TODO: Rework this method since Mango funnding settlement is different
+    // TODO: Rework this method since Mango funding settlement is different
 
     return fundingPayments;
   }
@@ -326,17 +345,11 @@ export class MangoClobPerp {
     return positions;
   }
 
-  public buildPostOrder(orderParams: CreatePerpOrderParam[]): {
-    orderType: OrderType;
-    price: string;
-    quantity: string;
-    marketId: any;
-    feeRecipient: string;
-    margin: string;
-  }[] {
+  public buildPostOrder(orderParams: CreatePerpOrderParam[]): PostOrderIx[] {
     // TODO: Add logic for buildPostOrder
     // TODO: Add OrderType type
     const derivativeOrdersToCreate = [];
+
     return derivativeOrdersToCreate;
   }
 
@@ -354,9 +367,10 @@ export class MangoClobPerp {
       | PerpClobPostOrderRequest
       | PerpClobBatchUpdateRequest
   ): Promise<{ txHash: string }> {
-    // TODO: Rework this method to fit Mango
-    const wallet = await this._chain.getWallet(req.address);
-    const privateKey: string = wallet.privateKey;
+    // TODO: Find out how much Compute Units each instruction type uses and batch them in one or multiple transactions
+    // TODO: Use replace order
+    const walletProvider = this.getProvider(req.address);
+    const mangoAccount = this._client.getMangoAccountsForOwner()
     let derivativeOrdersToCreate: CreatePerpOrderParam[] = [];
     let derivativeOrdersToCancel: ClobDeleteOrderRequestExtract[] = [];
     if ('createOrderParams' in req)
@@ -388,8 +402,10 @@ export class MangoClobPerp {
       derivativeOrdersToCancel: this.buildDeleteOrder(derivativeOrdersToCancel),
     });
 
-    const { txHash } = await this._chain.broadcaster(privateKey).broadcast({
-      msgs: msg,
+    this._client.perpPlaceOrderV2Ix()
+
+    const txHash = await this._client.sendAndConfirmTransaction([ix], {
+      alts: this.defaultGroup.addressLookupTablesList,
     });
     return { txHash };
   }

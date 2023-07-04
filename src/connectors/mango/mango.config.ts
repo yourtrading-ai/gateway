@@ -7,6 +7,7 @@ export namespace MangoConfig {
 
   export interface NetworkConfig {
     gasLimitEstimate: number;
+    prioritizationFee: number;
     tradingTypes: (type: string) => Array<string>;
     chainType: string;
     availableNetworks: Array<AvailableNetworks>;
@@ -15,6 +16,9 @@ export namespace MangoConfig {
   export const config: NetworkConfig = {
     gasLimitEstimate: ConfigManagerV2.getInstance().get(
       `solana.gasLimitEstimate`
+    ),
+    prioritizationFee: ConfigManagerV2.getInstance().get(
+      `solana.prioritizationFee`
     ),
     tradingTypes: (type: string) => {
       return type === 'spot' ? ['CLOB_SPOT'] : ['CLOB_PERP'];
