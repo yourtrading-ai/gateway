@@ -52,7 +52,7 @@ export class MangoClobPerp {
   public conf: MangoConfig.NetworkConfig;
 
   private _ready: boolean = false;
-  public parsedMarkets: PerpClobMarkets = {};
+  public parsedMarkets: PerpClobMarkets<PerpMarket> = {};
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
@@ -85,7 +85,7 @@ export class MangoClobPerp {
     //        config file (mango.defaultGroup)
     const derivativeMarkets = await this._client.perpGetMarkets(group);
     for (const market of derivativeMarkets) {
-      const key = market.name.replace(' PERP', 'USDC');
+      const key = market.name;
       this.parsedMarkets[key] = market;
     }
   }
@@ -104,7 +104,7 @@ export class MangoClobPerp {
 
   public async markets(
     req: PerpClobMarketRequest
-  ): Promise<{ markets: PerpClobMarkets }> {
+  ): Promise<{ markets: PerpClobMarkets<PerpMarket> }> {
     if (req.market && req.market.split('-').length === 2) {
       const resp: PerpClobMarkets = {};
 
@@ -115,11 +115,15 @@ export class MangoClobPerp {
   }
 
   public async orderBook(req: PerpClobOrderbookRequest): Promise<Orderbook> {
-    const resp = await this.markets(this.parsedMarkets[req.market].marketId);
+    const resp = await this.markets(req);
     const market = resp.markets[req.market];
+    const [buys, sells] = await Promise.all([
+      market.loadBids(this._client),
+      market.loadAsks(this._client),
+    ]);
     return {
-      buys: market.bids,
-      sells: market.asks,
+      buys,
+      sells,
     };
   }
 

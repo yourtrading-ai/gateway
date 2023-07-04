@@ -102,8 +102,8 @@ export type ClobDeleteOrderResponse = ClobPostOrderResponse;
 
 export type PerpClobMarketRequest = ClobMarketsRequest;
 
-export interface PerpClobMarkets {
-  [key: string]: any;
+export interface PerpClobMarkets<T = any> {
+  [key: string]: T;
 }
 
 export interface PerpClobMarketResponse {
