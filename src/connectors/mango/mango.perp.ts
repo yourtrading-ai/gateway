@@ -22,7 +22,7 @@ import {
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
-import {MangoClient, PerpMarket, Group, BookSide} from '@blockworks-foundation/mango-v4';
+import {MangoClient, PerpMarket, Group, BookSide, FillEvent} from '@blockworks-foundation/mango-v4';
 import {PerpMarketFills} from "./mango.types";
 
 // TODO: Add these types
@@ -131,10 +131,10 @@ export class MangoClobPerp {
   }
 
   private async loadFills(market: PerpMarket): Promise<PerpMarketFills> {
-    return{
+    return {
       marketName: market.name,
-      fills: await market.loadFills(this._client)
-    }
+      fills: await market.loadFills(this._client),
+    };
   }
 
   public async ticker(
@@ -155,22 +155,26 @@ export class MangoClobPerp {
 
   public async trades(
     req: PerpClobGetTradesRequest
-  ): Promise<Array<DerivativeTrade>> {
-    // TODO: Add DerivativeTrade type
-    // TODO: Add fetchTrades method
-    const marketId = this.parsedMarkets[req.market].marketId;
-    this._client.
+  ): Promise<Array<FillEvent>> {
+    const resp = await this.markets(req);
+    const market = resp.markets[req.market];
+    const fills = await this.loadFills(market);
 
-    const trades = await fetchTrades({
-      marketId,
-      account: req.address,
+    const trades = fills.fills.filter((fill) => {
+      return (
+        fill.maker.toString() === req.address ||
+        fill.taker.toString() === req.address
+      );
     });
 
     let targetTrade = undefined;
 
     if (req.orderId !== undefined) {
       for (const trade of trades) {
-        if (trade.orderHash === req.orderId) {
+        if (
+          trade.makerOrderId.toString() === req.orderId ||
+          trade.takerOrderId.toString() === req.orderId
+        ) {
           targetTrade = trade;
           break;
         }
