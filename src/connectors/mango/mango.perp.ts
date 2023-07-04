@@ -95,8 +95,8 @@ export class MangoClobPerp {
 
   public async loadMarkets(group: Group) {
     // @note: Mango allows for groups that include a selection of markets in one cross-margin basket,
-    //        but we are only supporting one market per group for now. You can change the group in the
-    //        config file (mango.defaultGroup)
+    //        but we are only supporting one group per Gateway instance for now. You can change the
+    //        group in the config file (mango.defaultGroup)
     const derivativeMarkets = await this._client.perpGetMarkets(group);
     for (const market of derivativeMarkets) {
       const key = market.name;
@@ -127,6 +127,15 @@ export class MangoClobPerp {
       preflightCommitment: 'confirmed',
       skipPreflight: false,
     });
+  }
+
+  private getMangoAccount(address: string, market: string): MangoAccount | undefined {
+    const userAccounts = this.mangoAccounts[address]
+    return this.mangoAccounts[address]? [market] ?? undefined;
+  }
+
+  private getOrCreateMangoAccount(address: string, market: string): MangoAccount {
+
   }
 
   public async markets(
@@ -349,7 +358,9 @@ export class MangoClobPerp {
     // TODO: Add logic for buildPostOrder
     // TODO: Add OrderType type
     const derivativeOrdersToCreate = [];
-
+    for (const order of orderParams) {
+      this._client.
+    }
     return derivativeOrdersToCreate;
   }
 
