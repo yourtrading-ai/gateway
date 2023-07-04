@@ -6,11 +6,10 @@ import {
 } from '@injectivelabs/sdk-ts';
 import { OrderType, Side } from '../amm/amm.requests';
 import { NetworkSelectionRequest } from '../services/common-interfaces';
-import { BookSide, PerpPosition } from '@blockworks-foundation/mango-v4';
 
-export interface Orderbook {
-  buys: PriceLevel[] | BookSide;
-  sells: PriceLevel[] | BookSide;
+export interface Orderbook<T = PriceLevel[]> {
+  buys: T;
+  sells: T;
 }
 export interface ClobMarketsRequest extends NetworkSelectionRequest {
   market?: string;
@@ -213,11 +212,11 @@ export interface PerpClobGetTradesRequest extends NetworkSelectionRequest {
   orderId: string;
 }
 
-export interface PerpClobGetTradesResponse {
+export interface PerpClobGetTradesResponse<T = DerivativeTrade> {
   network: string;
   timestamp: number;
   latency: number;
-  trades: Array<DerivativeTrade>;
+  trades: Array<T>;
 }
 
 export interface PerpClobFundingPaymentsRequest
@@ -226,11 +225,11 @@ export interface PerpClobFundingPaymentsRequest
   market: string;
 }
 
-export interface PerpClobFundingPaymentsResponse {
+export interface PerpClobFundingPaymentsResponse<T = FundingPayment> {
   network: string;
   timestamp: number;
   latency: number;
-  fundingPayments: Array<FundingPayment>;
+  fundingPayments: Array<T>;
 }
 
 export interface PerpClobPositionRequest extends NetworkSelectionRequest {
@@ -238,9 +237,9 @@ export interface PerpClobPositionRequest extends NetworkSelectionRequest {
   address: string;
 }
 
-export interface PerpClobPositionResponse {
+export interface PerpClobPositionResponse<T = Position> {
   network: string;
   timestamp: number;
   latency: number;
-  positions: Array<Position> | Array<PerpPosition>;
+  positions: Array<T>;
 }

@@ -22,7 +22,8 @@ import {
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
-import { MangoClient, PerpMarket, Group, PerpOrderSide } from '@blockworks-foundation/mango-v4';
+import {MangoClient, PerpMarket, Group, BookSide} from '@blockworks-foundation/mango-v4';
+import {PerpMarketFills} from "./mango.types";
 
 // TODO: Add these types
 // - Orderbook
@@ -114,7 +115,9 @@ export class MangoClobPerp {
     return { markets: this.parsedMarkets };
   }
 
-  public async orderBook(req: PerpClobOrderbookRequest): Promise<Orderbook> {
+  public async orderBook(
+    req: PerpClobOrderbookRequest
+  ): Promise<Orderbook<BookSide>> {
     const resp = await this.markets(req);
     const market = resp.markets[req.market];
     const [buys, sells] = await Promise.all([
@@ -127,6 +130,13 @@ export class MangoClobPerp {
     };
   }
 
+  private async loadFills(market: PerpMarket): Promise<PerpMarketFills> {
+    return{
+      marketName: market.name,
+      fills: await market.loadFills(this._client)
+    }
+  }
+
   public async ticker(
     req: PerpClobTickerRequest
   ): Promise<{ markets: PerpClobMarkets }> {
@@ -136,12 +146,11 @@ export class MangoClobPerp {
   public async lastTradePrice(
     req: PerpClobGetLastTradePriceRequest
   ): Promise<string | null> {
-    // TODO: Add fecthLastTradePrice method
-    const marketInfo = this.parsedMarkets[req.market];
-    const marketId = marketInfo.marketId;
-    const price = fecthLastTradePrice(marketId);
+    const resp = await this.markets(req);
+    const market = resp.markets[req.market];
+    const fills = await this.loadFills(market);
 
-    return price;
+    return fills.fills[0].price.toString();
   }
 
   public async trades(
@@ -150,6 +159,7 @@ export class MangoClobPerp {
     // TODO: Add DerivativeTrade type
     // TODO: Add fetchTrades method
     const marketId = this.parsedMarkets[req.market].marketId;
+    this._client.
 
     const trades = await fetchTrades({
       marketId,
