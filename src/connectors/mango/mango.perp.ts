@@ -33,6 +33,10 @@ import {
 } from '@blockworks-foundation/mango-v4';
 import { PerpMarketFills } from './mango.types';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import Dict = NodeJS.Dict;
+import {MangoAccountManager} from "./mango.accountManager";
+import {PublicKey} from "@solana/web3.js";
+import assert from "assert";
 
 // TODO: Add these types
 // - Orderbook
@@ -58,20 +62,19 @@ export class MangoClobPerp {
   private static _instances: LRUCache<string, MangoClobPerp>;
   private readonly _chain: Solana;
   private readonly _client: MangoClient;
-  public defaultGroup: Group;
+  public mangoGroup: Group;
   public conf: MangoConfig.NetworkConfig;
 
   private _ready: boolean = false;
   public parsedMarkets: PerpClobMarkets<PerpMarket> = {};
   // @note: Contains all MangoAccounts, grouped by owner address and base asset
-  public mangoAccounts: Record<string, Record<string, Array<MangoAccount>>> =
-    {};
+  public mangoAccounts: Dict<Dict<MangoAccount>> = {};
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
     // @todo: See how to handle multiple Keypairs
     this._client = MangoClient.connectDefault(this._chain.rpcUrl);
-    this.defaultGroup = MangoConfig.defaultGroup;
+    this.mangoGroup = MangoConfig.defaultGroup;
     this.conf = MangoConfig.config;
   }
 
@@ -107,7 +110,7 @@ export class MangoClobPerp {
   public async init() {
     if (!this._chain.ready() || Object.keys(this.parsedMarkets).length === 0) {
       await this._chain.init();
-      await this.loadMarkets(this.defaultGroup);
+      await this.loadMarkets(this.mangoGroup);
       this._ready = true;
     }
   }
@@ -116,10 +119,10 @@ export class MangoClobPerp {
     return this._ready;
   }
 
+  /**
+   * Returns a context object for sending transactions with a stored wallet.
+   */
   private async getProvider(address: string): Promise<AnchorProvider> {
-    /**
-     * Returns a context object for sending transactions with a stored wallet.
-     */
     const wallet = new Wallet(await this._chain.getKeypair(address));
     return new AnchorProvider(this._chain.connection, wallet, {
       commitment: 'confirmed',
@@ -130,12 +133,49 @@ export class MangoClobPerp {
   }
 
   private getMangoAccount(address: string, market: string): MangoAccount | undefined {
-    const userAccounts = this.mangoAccounts[address]
-    return this.mangoAccounts[address]? [market] ?? undefined;
+    const userAccounts = this.mangoAccounts[address];
+    return userAccounts === undefined ? undefined : userAccounts[market];
   }
 
-  private getOrCreateMangoAccount(address: string, market: string): MangoAccount {
+  /**
+   * Accepts a user's public key and a market name as used inside Mango (BTC-PERP, MNGO-PERP, ...)
+   * This method makes sure that all existent accounts are being fetched, the first time a user is looking for his
+   * MangoAccounts. Each combination of user address and market name have their own MangoAccount in order to realize
+   * isolated margin-style positions.
+   */
+  private async getOrCreateMangoAccount(address: string, market: string): Promise<MangoAccount> {
+    let foundAccount = this.getMangoAccount(address, market);
+    if(foundAccount) return foundAccount
 
+    // check if user has been initialized and accounts fetched
+    if(this.mangoAccounts[address] === undefined) {
+      this.mangoAccounts[address] = {};
+      const accounts = await this._client.getMangoAccountsForOwner(this.mangoGroup, new PublicKey(address));
+      accounts.forEach((account) => {
+        this.mangoAccounts[address]![account.name] = account;
+        if(account.name === market) foundAccount = account;
+      })
+      if(foundAccount) return foundAccount
+    }
+
+    // get accounts and find accountNumber to use to create new MangoAccount
+    const accounts = Object.values(this.mangoAccounts[address]!).filter((account) => {
+      return account !== undefined
+    }) as MangoAccount[]
+    let usedIndexes = accounts.map(account => account.accountNum).sort();
+    const accountNumber = usedIndexes.find((value, index, array) => {
+      if(index === array.length - 1) return true;
+      return array[index - 1] + 1 !== value;
+    })
+
+    // @todo: Check if there is account space optimization possible with tokenCount
+    const newAccount =  await this._client.createAndFetchMangoAccount(this.mangoGroup, accountNumber, market)
+
+    if(newAccount === undefined)
+      throw Error(`MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})`)
+
+    this.mangoAccounts[address]![market] = newAccount
+    return newAccount
   }
 
   public async markets(
@@ -416,7 +456,7 @@ export class MangoClobPerp {
     this._client.perpPlaceOrderV2Ix()
 
     const txHash = await this._client.sendAndConfirmTransaction([ix], {
-      alts: this.defaultGroup.addressLookupTablesList,
+      alts: this.mangoGroup.addressLookupTablesList,
     });
     return { txHash };
   }
