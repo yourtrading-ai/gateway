@@ -19,7 +19,7 @@ import {
   PerpClobBatchUpdateRequest,
   ClobDeleteOrderRequestExtract,
   CreatePerpOrderParam,
-  Orderbook,
+  Orderbook, PerpClobModifyOrderRequest, ModifyPerpOrderParam,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
@@ -29,13 +29,13 @@ import {
   Group,
   BookSide,
   FillEvent,
-  MangoAccount,
+  MangoAccount, PerpOrderSide,
 } from '@blockworks-foundation/mango-v4';
 import { PerpMarketFills } from './mango.types';
-import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import {AnchorProvider, Instruction, InstructionCoder, Wallet} from '@coral-xyz/anchor';
 import Dict = NodeJS.Dict;
 import {MangoAccountManager} from "./mango.accountManager";
-import {PublicKey} from "@solana/web3.js";
+import {PublicKey, TransactionInstruction} from "@solana/web3.js";
 import assert from "assert";
 
 // TODO: Add these types
@@ -172,7 +172,8 @@ export class MangoClobPerp {
     const newAccount =  await this._client.createAndFetchMangoAccount(this.mangoGroup, accountNumber, market)
 
     if(newAccount === undefined)
-      throw Error(`MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})`)
+      // @note
+      throw Error(`MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`)
 
     this.mangoAccounts[address]![market] = newAccount
     return newAccount
@@ -394,22 +395,52 @@ export class MangoClobPerp {
     return positions;
   }
 
-  public buildPostOrder(orderParams: CreatePerpOrderParam[]): PostOrderIx[] {
-    // TODO: Add logic for buildPostOrder
-    // TODO: Add OrderType type
-    const derivativeOrdersToCreate = [];
-    for (const order of orderParams) {
-      this._client.
+  private async buildPostOrder(
+    provider: AnchorProvider,
+    orders: CreatePerpOrderParam[]
+  ): Promise<TransactionInstruction[]> {
+    const perpOrdersToCreate = [];
+    for (const order of orders) {
+      const mangoAccount = await this.getOrCreateMangoAccount(
+        provider.wallet.publicKey.toString(),
+        order.market
+      );
+      const market = this.parsedMarkets[order.market];
+      perpOrdersToCreate.push(
+        this._client.perpPlaceOrderV2Ix(
+          this.mangoGroup,
+          mangoAccount,
+          market.perpMarketIndex,
+          order.side === 'BUY' ? PerpOrderSide.bid : PerpOrderSide.ask,
+          Number(order.price),
+          Number(order.amount)
+        )
+      );
     }
-    return derivativeOrdersToCreate;
+    return await Promise.all(perpOrdersToCreate);
   }
 
-  public buildDeleteOrder(
+  private async buildDeleteOrder(
+    provider: AnchorProvider,
     orders: ClobDeleteOrderRequestExtract[]
-  ): { marketId: any; subaccountId: string; orderHash: string }[] {
-    const derivativeOrdersToCancel = [];
-    // TODO: Add logic for buildDeleteOrder
-    return derivativeOrdersToCancel;
+  ): Promise<TransactionInstruction[]> {
+    const perpOrdersToCancel = [];
+    for (const order of orders) {
+      const mangoAccount = await this.getOrCreateMangoAccount(
+        provider.wallet.publicKey.toString(),
+        order.market
+      );
+      const market = this.parsedMarkets[order.market];
+      perpOrdersToCancel.push(
+        this._client.perpCancelOrderIx(
+          this.mangoGroup,
+          mangoAccount,
+          market.perpMarketIndex,
+          new BN(order.orderId)
+        )
+      );
+    }
+    return await Promise.all(perpOrdersToCancel);
   }
 
   public async orderUpdate(
@@ -419,9 +450,7 @@ export class MangoClobPerp {
       | PerpClobBatchUpdateRequest
   ): Promise<{ txHash: string }> {
     // TODO: Find out how much Compute Units each instruction type uses and batch them in one or multiple transactions
-    // TODO: Use replace order
-    const walletProvider = this.getProvider(req.address);
-    const mangoAccount = this._client.getMangoAccountsForOwner()
+    const walletProvider = await this.getProvider(req.address);
     let derivativeOrdersToCreate: CreatePerpOrderParam[] = [];
     let derivativeOrdersToCancel: ClobDeleteOrderRequestExtract[] = [];
     if ('createOrderParams' in req)
@@ -447,15 +476,15 @@ export class MangoClobPerp {
         market: req.market,
       });
 
-    const msg = MsgBatchUpdateOrders.fromJSON({
-      subaccountId: req.address,
-      derivativeOrdersToCreate: this.buildPostOrder(derivativeOrdersToCreate),
-      derivativeOrdersToCancel: this.buildDeleteOrder(derivativeOrdersToCancel),
-    });
+    const instructions = [
+      ...(await this.buildDeleteOrder(
+        walletProvider,
+        derivativeOrdersToCancel
+      )),
+      ...(await this.buildPostOrder(walletProvider, derivativeOrdersToCreate)),
+    ];
 
-    this._client.perpPlaceOrderV2Ix()
-
-    const txHash = await this._client.sendAndConfirmTransaction([ix], {
+    const txHash = await this._client.sendAndConfirmTransaction(instructions, {
       alts: this.mangoGroup.addressLookupTablesList,
     });
     return { txHash };
