@@ -20,7 +20,8 @@
     "test:debug": "node --inspect node_modules/.bin/jest --watch --runInBand",
     "test:unit": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --verbose ./test/",
     "test:cov": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --coverage ./test/",
-    "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts"
+    "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts",
+    "test:mango": "jest -i --verbose test/connectors/mango/*.test.ts"
   },
   "dependencies": {
     "@blockworks-foundation/mango-v4": "^0.16.12",

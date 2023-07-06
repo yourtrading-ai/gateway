@@ -27,7 +27,7 @@ export namespace MangoConfig {
     availableNetworks: [
       {
         chain: 'solana',
-        networks: ['mainnet', 'testnet'],
+        networks: ['mainnet-beta', 'testnet', 'devnet'],
       },
     ],
   };

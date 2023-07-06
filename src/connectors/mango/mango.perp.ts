@@ -19,7 +19,9 @@ import {
   PerpClobBatchUpdateRequest,
   ClobDeleteOrderRequestExtract,
   CreatePerpOrderParam,
-  Orderbook, PerpClobModifyOrderRequest, ModifyPerpOrderParam,
+  Orderbook,
+  PerpClobModifyOrderRequest,
+  ModifyPerpOrderParam,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
@@ -29,14 +31,20 @@ import {
   Group,
   BookSide,
   FillEvent,
-  MangoAccount, PerpOrderSide,
+  MangoAccount,
+  PerpOrderSide,
 } from '@blockworks-foundation/mango-v4';
 import { PerpMarketFills } from './mango.types';
-import {AnchorProvider, Instruction, InstructionCoder, Wallet} from '@coral-xyz/anchor';
+import {
+  AnchorProvider,
+  Instruction,
+  InstructionCoder,
+  Wallet,
+} from '@coral-xyz/anchor';
 import Dict = NodeJS.Dict;
-import {MangoAccountManager} from "./mango.accountManager";
-import {PublicKey, TransactionInstruction} from "@solana/web3.js";
-import assert from "assert";
+import { MangoAccountManager } from './mango.accountManager';
+import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import assert from 'assert';
 
 // TODO: Add these types
 // - Orderbook
@@ -132,7 +140,10 @@ export class MangoClobPerp {
     });
   }
 
-  private getMangoAccount(address: string, market: string): MangoAccount | undefined {
+  private getMangoAccount(
+    address: string,
+    market: string
+  ): MangoAccount | undefined {
     const userAccounts = this.mangoAccounts[address];
     return userAccounts === undefined ? undefined : userAccounts[market];
   }
@@ -143,40 +154,54 @@ export class MangoClobPerp {
    * MangoAccounts. Each combination of user address and market name have their own MangoAccount in order to realize
    * isolated margin-style positions.
    */
-  private async getOrCreateMangoAccount(address: string, market: string): Promise<MangoAccount> {
+  private async getOrCreateMangoAccount(
+    address: string,
+    market: string
+  ): Promise<MangoAccount> {
     let foundAccount = this.getMangoAccount(address, market);
-    if(foundAccount) return foundAccount
+    if (foundAccount) return foundAccount;
 
     // check if user has been initialized and accounts fetched
-    if(this.mangoAccounts[address] === undefined) {
+    if (this.mangoAccounts[address] === undefined) {
       this.mangoAccounts[address] = {};
-      const accounts = await this._client.getMangoAccountsForOwner(this.mangoGroup, new PublicKey(address));
+      const accounts = await this._client.getMangoAccountsForOwner(
+        this.mangoGroup,
+        new PublicKey(address)
+      );
       accounts.forEach((account) => {
         this.mangoAccounts[address]![account.name] = account;
-        if(account.name === market) foundAccount = account;
-      })
-      if(foundAccount) return foundAccount
+        if (account.name === market) foundAccount = account;
+      });
+      if (foundAccount) return foundAccount;
     }
 
     // get accounts and find accountNumber to use to create new MangoAccount
-    const accounts = Object.values(this.mangoAccounts[address]!).filter((account) => {
-      return account !== undefined
-    }) as MangoAccount[]
-    let usedIndexes = accounts.map(account => account.accountNum).sort();
+    const accounts = Object.values(this.mangoAccounts[address]!).filter(
+      (account) => {
+        return account !== undefined;
+      }
+    ) as MangoAccount[];
+    let usedIndexes = accounts.map((account) => account.accountNum).sort();
     const accountNumber = usedIndexes.find((value, index, array) => {
-      if(index === array.length - 1) return true;
+      if (index === array.length - 1) return true;
       return array[index - 1] + 1 !== value;
-    })
+    });
 
     // @todo: Check if there is account space optimization possible with tokenCount
-    const newAccount =  await this._client.createAndFetchMangoAccount(this.mangoGroup, accountNumber, market)
+    const newAccount = await this._client.createAndFetchMangoAccount(
+      this.mangoGroup,
+      accountNumber,
+      market
+    );
 
-    if(newAccount === undefined)
+    if (newAccount === undefined)
       // @note
-      throw Error(`MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`)
+      throw Error(
+        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`
+      );
 
-    this.mangoAccounts[address]![market] = newAccount
-    return newAccount
+    this.mangoAccounts[address]![market] = newAccount;
+    return newAccount;
   }
 
   public async markets(
