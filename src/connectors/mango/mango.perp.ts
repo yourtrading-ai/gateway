@@ -3,10 +3,16 @@ import LRUCache from 'lru-cache';
 import { Solana } from '../../chains/solana/solana'; // TODO: Add solana chain
 import { getSolanaConfig } from '../../chains/solana/solana.config'; // TODO: Add solana chain config
 import {
+  ClobDeleteOrderRequestExtract,
+  CreatePerpOrderParam,
+  extractPerpOrderParams,
   FundingInfo,
+  Orderbook,
+  PerpClobBatchUpdateRequest,
   PerpClobDeleteOrderRequest,
   PerpClobFundingInfoRequest,
   PerpClobFundingPaymentsRequest,
+  PerpClobGetLastTradePriceRequest,
   PerpClobGetOrderRequest,
   PerpClobGetTradesRequest,
   PerpClobMarketRequest,
@@ -15,28 +21,22 @@ import {
   PerpClobPositionRequest,
   PerpClobPostOrderRequest,
   PerpClobTickerRequest,
-  PerpClobGetLastTradePriceRequest,
-  PerpClobBatchUpdateRequest,
-  ClobDeleteOrderRequestExtract,
-  CreatePerpOrderParam,
-  Orderbook, PerpClobModifyOrderRequest, ModifyPerpOrderParam,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
 import {
-  MangoClient,
-  PerpMarket,
-  Group,
   BookSide,
   FillEvent,
-  MangoAccount, PerpOrderSide,
+  Group,
+  MangoAccount,
+  MangoClient,
+  PerpMarket,
+  PerpOrderSide,
 } from '@blockworks-foundation/mango-v4';
 import { PerpMarketFills } from './mango.types';
-import {AnchorProvider, Instruction, InstructionCoder, Wallet} from '@coral-xyz/anchor';
+import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import Dict = NodeJS.Dict;
-import {MangoAccountManager} from "./mango.accountManager";
-import {PublicKey, TransactionInstruction} from "@solana/web3.js";
-import assert from "assert";
 
 // TODO: Add these types
 // - Orderbook
@@ -100,8 +100,8 @@ export class MangoClobPerp {
     // @note: Mango allows for groups that include a selection of markets in one cross-margin basket,
     //        but we are only supporting one group per Gateway instance for now. You can change the
     //        group in the config file (mango.defaultGroup)
-    const derivativeMarkets = await this._client.perpGetMarkets(group);
-    for (const market of derivativeMarkets) {
+    const perpMarkets = await this._client.perpGetMarkets(group);
+    for (const market of perpMarkets) {
       const key = market.name;
       this.parsedMarkets[key] = market;
     }
@@ -132,7 +132,10 @@ export class MangoClobPerp {
     });
   }
 
-  private getMangoAccount(address: string, market: string): MangoAccount | undefined {
+  private getMangoAccount(
+    address: string,
+    market: string
+  ): MangoAccount | undefined {
     const userAccounts = this.mangoAccounts[address];
     return userAccounts === undefined ? undefined : userAccounts[market];
   }
@@ -143,40 +146,54 @@ export class MangoClobPerp {
    * MangoAccounts. Each combination of user address and market name have their own MangoAccount in order to realize
    * isolated margin-style positions.
    */
-  private async getOrCreateMangoAccount(address: string, market: string): Promise<MangoAccount> {
+  private async getOrCreateMangoAccount(
+    address: string,
+    market: string
+  ): Promise<MangoAccount> {
     let foundAccount = this.getMangoAccount(address, market);
-    if(foundAccount) return foundAccount
+    if (foundAccount) return foundAccount;
 
     // check if user has been initialized and accounts fetched
-    if(this.mangoAccounts[address] === undefined) {
+    if (this.mangoAccounts[address] === undefined) {
       this.mangoAccounts[address] = {};
-      const accounts = await this._client.getMangoAccountsForOwner(this.mangoGroup, new PublicKey(address));
+      const accounts = await this._client.getMangoAccountsForOwner(
+        this.mangoGroup,
+        new PublicKey(address)
+      );
       accounts.forEach((account) => {
         this.mangoAccounts[address]![account.name] = account;
-        if(account.name === market) foundAccount = account;
-      })
-      if(foundAccount) return foundAccount
+        if (account.name === market) foundAccount = account;
+      });
+      if (foundAccount) return foundAccount;
     }
 
     // get accounts and find accountNumber to use to create new MangoAccount
-    const accounts = Object.values(this.mangoAccounts[address]!).filter((account) => {
-      return account !== undefined
-    }) as MangoAccount[]
-    let usedIndexes = accounts.map(account => account.accountNum).sort();
+    const accounts = Object.values(this.mangoAccounts[address]!).filter(
+      (account) => {
+        return account !== undefined;
+      }
+    ) as MangoAccount[];
+    const usedIndexes = accounts.map((account) => account.accountNum).sort();
     const accountNumber = usedIndexes.find((value, index, array) => {
-      if(index === array.length - 1) return true;
+      if (index === array.length - 1) return true;
       return array[index - 1] + 1 !== value;
-    })
+    });
 
     // @todo: Check if there is account space optimization possible with tokenCount
-    const newAccount =  await this._client.createAndFetchMangoAccount(this.mangoGroup, accountNumber, market)
+    const newAccount = await this._client.createAndFetchMangoAccount(
+      this.mangoGroup,
+      accountNumber,
+      market
+    );
 
-    if(newAccount === undefined)
+    if (newAccount === undefined)
       // @note
-      throw Error(`MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`)
+      throw Error(
+        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`
+      );
 
-    this.mangoAccounts[address]![market] = newAccount
-    return newAccount
+    this.mangoAccounts[address]![market] = newAccount;
+    return newAccount;
   }
 
   public async markets(
@@ -324,21 +341,18 @@ export class MangoClobPerp {
     return priceBig.mul(quantityBig).divn(leverage);
   }
 
-  // TODO: Review this method
   public async postOrder(
     req: PerpClobPostOrderRequest
   ): Promise<{ txHash: string }> {
     return await this.orderUpdate(req);
   }
 
-  // TODO: Review this method
   public async deleteOrder(
     req: PerpClobDeleteOrderRequest
   ): Promise<{ txHash: string }> {
     return this.orderUpdate(req);
   }
 
-  // TODO: Review this method
   public async batchPerpOrders(
     req: PerpClobBatchUpdateRequest
   ): Promise<{ txHash: string }> {
@@ -450,38 +464,14 @@ export class MangoClobPerp {
       | PerpClobBatchUpdateRequest
   ): Promise<{ txHash: string }> {
     // TODO: Find out how much Compute Units each instruction type uses and batch them in one or multiple transactions
+    // TODO: Transfer funds to MangoAccount if necessary
     const walletProvider = await this.getProvider(req.address);
-    let derivativeOrdersToCreate: CreatePerpOrderParam[] = [];
-    let derivativeOrdersToCancel: ClobDeleteOrderRequestExtract[] = [];
-    if ('createOrderParams' in req)
-      derivativeOrdersToCreate = derivativeOrdersToCreate.concat(
-        req.createOrderParams as CreatePerpOrderParam[]
-      );
-    if ('price' in req)
-      derivativeOrdersToCreate.push({
-        price: req.price,
-        amount: req.amount,
-        orderType: req.orderType,
-        side: req.side,
-        market: req.market,
-        leverage: req.leverage,
-      });
-    if ('cancelOrderParams' in req)
-      derivativeOrdersToCancel = derivativeOrdersToCancel.concat(
-        req.cancelOrderParams as ClobDeleteOrderRequestExtract[]
-      );
-    if ('orderId' in req)
-      derivativeOrdersToCancel.push({
-        orderId: req.orderId,
-        market: req.market,
-      });
+    const { perpOrdersToCreate, perpOrdersToCancel } =
+      extractPerpOrderParams(req);
 
     const instructions = [
-      ...(await this.buildDeleteOrder(
-        walletProvider,
-        derivativeOrdersToCancel
-      )),
-      ...(await this.buildPostOrder(walletProvider, derivativeOrdersToCreate)),
+      ...(await this.buildDeleteOrder(walletProvider, perpOrdersToCancel)),
+      ...(await this.buildPostOrder(walletProvider, perpOrdersToCreate)),
     ];
 
     const txHash = await this._client.sendAndConfirmTransaction(instructions, {

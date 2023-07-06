@@ -175,6 +175,42 @@ export interface PerpClobBatchUpdateRequest extends NetworkSelectionRequest {
 
 export type PerpClobBatchUpdateResponse = ClobPostOrderResponse;
 
+export function extractPerpOrderParams(
+  req:
+    | PerpClobDeleteOrderRequest
+    | PerpClobPostOrderRequest
+    | PerpClobBatchUpdateRequest
+): {
+  perpOrdersToCreate: CreatePerpOrderParam[];
+  perpOrdersToCancel: ClobDeleteOrderRequestExtract[];
+} {
+  let perpOrdersToCreate: CreatePerpOrderParam[] = [];
+  let perpOrdersToCancel: ClobDeleteOrderRequestExtract[] = [];
+  if ('createOrderParams' in req)
+    perpOrdersToCreate = perpOrdersToCreate.concat(
+      req.createOrderParams as CreatePerpOrderParam[]
+    );
+  if ('price' in req)
+    perpOrdersToCreate.push({
+      price: req.price,
+      amount: req.amount,
+      orderType: req.orderType,
+      side: req.side,
+      market: req.market,
+      leverage: req.leverage,
+    });
+  if ('cancelOrderParams' in req)
+    perpOrdersToCancel = perpOrdersToCancel.concat(
+      req.cancelOrderParams as ClobDeleteOrderRequestExtract[]
+    );
+  if ('orderId' in req)
+    perpOrdersToCancel.push({
+      orderId: req.orderId,
+      market: req.market,
+    });
+  return { perpOrdersToCreate, perpOrdersToCancel };
+}
+
 export interface PerpClobFundingInfoRequest extends NetworkSelectionRequest {
   market: string;
 }

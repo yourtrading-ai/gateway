@@ -35,6 +35,7 @@ import {
   PerpClobBatchUpdateRequest,
   ClobDeleteOrderRequestExtract,
   CreatePerpOrderParam,
+  extractPerpOrderParams,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { InjectiveCLOBConfig } from '../injective/injective.clob.config';
@@ -538,40 +539,18 @@ export class InjectiveClobPerp {
     const wallet = await this._chain.getWallet(req.address);
     const privateKey: string = wallet.privateKey;
     const injectiveAddress: string = wallet.injectiveAddress;
-    let derivativeOrdersToCreate: CreatePerpOrderParam[] = [];
-    let derivativeOrdersToCancel: ClobDeleteOrderRequestExtract[] = [];
-    if ('createOrderParams' in req)
-      derivativeOrdersToCreate = derivativeOrdersToCreate.concat(
-        req.createOrderParams as CreatePerpOrderParam[]
-      );
-    if ('price' in req)
-      derivativeOrdersToCreate.push({
-        price: req.price,
-        amount: req.amount,
-        orderType: req.orderType,
-        side: req.side,
-        market: req.market,
-        leverage: req.leverage,
-      });
-    if ('cancelOrderParams' in req)
-      derivativeOrdersToCancel = derivativeOrdersToCancel.concat(
-        req.cancelOrderParams as ClobDeleteOrderRequestExtract[]
-      );
-    if ('orderId' in req)
-      derivativeOrdersToCancel.push({
-        orderId: req.orderId,
-        market: req.market,
-      });
+    const { perpOrdersToCreate, perpOrdersToCancel } =
+      extractPerpOrderParams(req);
 
     const msg = MsgBatchUpdateOrders.fromJSON({
       subaccountId: req.address,
       injectiveAddress,
       derivativeOrdersToCreate: this.buildPostOrder(
-        derivativeOrdersToCreate,
+        perpOrdersToCreate,
         injectiveAddress
       ),
       derivativeOrdersToCancel: this.buildDeleteOrder(
-        derivativeOrdersToCancel,
+        perpOrdersToCancel,
         req.address
       ),
     });
