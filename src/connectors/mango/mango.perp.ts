@@ -20,8 +20,8 @@ import {
   ClobDeleteOrderRequestExtract,
   CreatePerpOrderParam,
   Orderbook,
-  PerpClobModifyOrderRequest,
-  ModifyPerpOrderParam,
+  // PerpClobModifyOrderRequest,
+  // ModifyPerpOrderParam,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
@@ -34,17 +34,23 @@ import {
   MangoAccount,
   PerpOrderSide,
 } from '@blockworks-foundation/mango-v4';
-import { PerpMarketFills } from './mango.types';
+import {
+  PerpMarketFills,
+  DerivativeOrderHistory,
+  TradeDirection,
+  TradeHistory,
+} from './mango.types';
+import { getTradeHistory } from './mango.utils';
+
 import {
   AnchorProvider,
-  Instruction,
-  InstructionCoder,
+  // Instruction,
+  // InstructionCoder,
   Wallet,
 } from '@coral-xyz/anchor';
 import Dict = NodeJS.Dict;
-import { MangoAccountManager } from './mango.accountManager';
+// import { MangoAccountManager } from './mango.accountManager';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import assert from 'assert';
 
 // TODO: Add these types
 // - Orderbook
@@ -257,25 +263,21 @@ export class MangoClobPerp {
 
   public async trades(
     req: PerpClobGetTradesRequest
-  ): Promise<Array<FillEvent>> {
-    const resp = await this.markets(req);
-    const market = resp.markets[req.market];
-    const fills = await this.loadFills(market);
+  ): Promise<Array<TradeHistory>> {
+    const mangoAccount = await this.getOrCreateMangoAccount(
+      req.address,
+      req.market
+    );
 
-    const trades = fills.fills.filter((fill) => {
-      return (
-        fill.maker.toString() === req.address ||
-        fill.taker.toString() === req.address
-      );
-    });
+    const trades = await getTradeHistory(mangoAccount.publicKey.toString());
 
     let targetTrade = undefined;
 
     if (req.orderId !== undefined) {
       for (const trade of trades) {
         if (
-          trade.makerOrderId.toString() === req.orderId ||
-          trade.takerOrderId.toString() === req.orderId
+          trade.activity_details.taker_client_order_id === req.orderId ||
+          trade.activity_details.taker_client_order_id === req.orderId
         ) {
           targetTrade = trade;
           break;
