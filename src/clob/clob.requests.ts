@@ -149,6 +149,7 @@ export interface CreatePerpOrderParam {
   side: Side;
   market: string;
   leverage: number;
+  clientOrderID?: number;
 }
 
 export interface PerpClobPostOrderRequest

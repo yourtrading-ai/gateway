@@ -40,7 +40,11 @@ import {
   TradeDirection,
   TradeHistory,
 } from './mango.types';
-import { getTradeHistory } from './mango.utils';
+import {
+  getTradeHistory,
+  translateOrderSide,
+  translateOrderType,
+} from './mango.utils';
 
 import {
   AnchorProvider,
@@ -351,21 +355,18 @@ export class MangoClobPerp {
     return priceBig.mul(quantityBig).divn(leverage);
   }
 
-  // TODO: Review this method
   public async postOrder(
     req: PerpClobPostOrderRequest
   ): Promise<{ txHash: string }> {
     return await this.orderUpdate(req);
   }
 
-  // TODO: Review this method
   public async deleteOrder(
     req: PerpClobDeleteOrderRequest
   ): Promise<{ txHash: string }> {
     return this.orderUpdate(req);
   }
 
-  // TODO: Review this method
   public async batchPerpOrders(
     req: PerpClobBatchUpdateRequest
   ): Promise<{ txHash: string }> {
@@ -438,9 +439,12 @@ export class MangoClobPerp {
           this.mangoGroup,
           mangoAccount,
           market.perpMarketIndex,
-          order.side === 'BUY' ? PerpOrderSide.bid : PerpOrderSide.ask,
+          translateOrderSide(order.side),
           Number(order.price),
-          Number(order.amount)
+          Number(order.amount),
+          undefined,
+          order.clientOrderID,
+          translateOrderType(order.orderType)
         )
       );
     }
