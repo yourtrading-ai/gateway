@@ -1,7 +1,6 @@
 import {
   DerivativeTrade,
   FundingPayment,
-  Position,
   PriceLevel,
 } from '@injectivelabs/sdk-ts';
 import { OrderType, Side } from '../amm/amm.requests';
@@ -238,9 +237,15 @@ export interface PerpClobPositionRequest extends NetworkSelectionRequest {
   address: string;
 }
 
-export interface PerpClobPositionResponse<T = Position> {
+export interface PerpClobPositionResponse {
   network: string;
   timestamp: number;
   latency: number;
-  positions: Array<T>;
+  positions:
+    | [
+        {
+          [key: string]: string;
+        }
+      ]
+    | [];
 }

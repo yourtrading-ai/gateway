@@ -33,6 +33,8 @@ import {
   FillEvent,
   MangoAccount,
   PerpOrderSide,
+  PerpMarketIndex,
+  PerpPosition,
 } from '@blockworks-foundation/mango-v4';
 import {
   PerpMarketFills,
@@ -405,19 +407,40 @@ export class MangoClobPerp {
 
   public async positions(
     req: PerpClobPositionRequest
-  ): Promise<Array<Position>> {
-    // TODO: Add Position type
-    // TODO: Add fetchPositions method
+  ): Promise<Array<PerpPosition>> {
     // TODO: Review this method since we will need to create simulated isolated margin account
 
-    const marketIds = [];
+    const marketIndexs = [];
     for (const market of req.markets) {
-      marketIds.push(this.parsedMarkets[market].marketId);
+      marketIndexs.push(this.parsedMarkets[market].perpMarketIndex);
     }
 
-    const positions = await fetchPositions({
-      marketIds,
-      accountID: req.address,
+    const positions = await this.fetchPositions(marketIndexs, req.address);
+
+    return positions;
+  }
+
+  private async fetchPositions(
+    marketIndexs: PerpMarketIndex[],
+    ownerPk: string
+  ) {
+    const positions: PerpPosition[] = [];
+
+    marketIndexs.map((marketIndex) => {
+      const mangoAccount = this.getMangoAccount(
+        ownerPk,
+        marketIndex.toString()
+      );
+
+      if (mangoAccount === undefined) {
+        return;
+      }
+
+      const filterdPerpPositions = mangoAccount
+        .perpActive()
+        .filter((pp) => pp.marketIndex === marketIndex);
+
+      positions.concat(filterdPerpPositions);
     });
 
     return positions;
