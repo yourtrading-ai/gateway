@@ -30,9 +30,9 @@ import {
   PerpMarket,
   Group,
   BookSide,
-  FillEvent,
+  // FillEvent,
   MangoAccount,
-  PerpOrderSide,
+  // PerpOrderSide,
   PerpMarketIndex,
   PerpPosition,
 } from '@blockworks-foundation/mango-v4';
@@ -181,6 +181,7 @@ export class MangoClobPerp {
         new PublicKey(address)
       );
       accounts.forEach((account) => {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         this.mangoAccounts[address]![account.name] = account;
         if (account.name === market) foundAccount = account;
       });
@@ -188,12 +189,13 @@ export class MangoClobPerp {
     }
 
     // get accounts and find accountNumber to use to create new MangoAccount
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const accounts = Object.values(this.mangoAccounts[address]!).filter(
       (account) => {
         return account !== undefined;
       }
     ) as MangoAccount[];
-    let usedIndexes = accounts.map((account) => account.accountNum).sort();
+    const usedIndexes = accounts.map((account) => account.accountNum).sort();
     const accountNumber = usedIndexes.find((value, index, array) => {
       if (index === array.length - 1) return true;
       return array[index - 1] + 1 !== value;
@@ -212,6 +214,7 @@ export class MangoClobPerp {
         `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`
       );
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.mangoAccounts[address]![market] = newAccount;
     return newAccount;
   }
