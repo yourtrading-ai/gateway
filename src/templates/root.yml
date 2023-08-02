@@ -119,3 +119,7 @@ configurations:
   $namespace solana:
     configurationPath: solana.yml
     schemaPath: solana-schema.json
+
+  $namespace mango:
+    configurationPath: mango.yml
+    schemaPath: mango-schema.json

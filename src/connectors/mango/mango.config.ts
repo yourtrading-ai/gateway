@@ -5,6 +5,10 @@ export namespace MangoConfig {
   export const defaultGroup: any =
     ConfigManagerV2.getInstance().get('mango.defaultGroup');
 
+  export const tradeHistoryApiUrl: any = ConfigManagerV2.getInstance().get(
+    'mango.tradeHistoryApiUrl'
+  );
+
   export interface NetworkConfig {
     gasLimitEstimate: number;
     prioritizationFee: number;
@@ -27,7 +31,7 @@ export namespace MangoConfig {
     availableNetworks: [
       {
         chain: 'solana',
-        networks: ['mainnet', 'testnet'],
+        networks: ['mainnet-beta', 'testnet', 'devnet'],
       },
     ],
   };

@@ -3,16 +3,10 @@ import LRUCache from 'lru-cache';
 import { Solana } from '../../chains/solana/solana'; // TODO: Add solana chain
 import { getSolanaConfig } from '../../chains/solana/solana.config'; // TODO: Add solana chain config
 import {
-  ClobDeleteOrderRequestExtract,
-  CreatePerpOrderParam,
-  extractPerpOrderParams,
   FundingInfo,
-  Orderbook,
-  PerpClobBatchUpdateRequest,
   PerpClobDeleteOrderRequest,
   PerpClobFundingInfoRequest,
   PerpClobFundingPaymentsRequest,
-  PerpClobGetLastTradePriceRequest,
   PerpClobGetOrderRequest,
   PerpClobGetTradesRequest,
   PerpClobMarketRequest,
@@ -21,22 +15,49 @@ import {
   PerpClobPositionRequest,
   PerpClobPostOrderRequest,
   PerpClobTickerRequest,
+  PerpClobGetLastTradePriceRequest,
+  PerpClobBatchUpdateRequest,
+  ClobDeleteOrderRequestExtract,
+  CreatePerpOrderParam,
+  Orderbook,
+  extractPerpOrderParams,
+  // PerpClobModifyOrderRequest,
+  // ModifyPerpOrderParam,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
 import {
-  BookSide,
-  FillEvent,
-  Group,
-  MangoAccount,
   MangoClient,
   PerpMarket,
-  PerpOrderSide,
+  Group,
+  BookSide,
+  // FillEvent,
+  MangoAccount,
+  // PerpOrderSide,
+  PerpMarketIndex,
+  PerpPosition,
 } from '@blockworks-foundation/mango-v4';
-import { PerpMarketFills } from './mango.types';
-import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import {
+  PerpMarketFills,
+  DerivativeOrderHistory,
+  TradeDirection,
+  TradeHistory,
+} from './mango.types';
+import {
+  getTradeHistory,
+  translateOrderSide,
+  translateOrderType,
+} from './mango.utils';
+
+import {
+  AnchorProvider,
+  // Instruction,
+  // InstructionCoder,
+  Wallet,
+} from '@coral-xyz/anchor';
 import Dict = NodeJS.Dict;
+// import { MangoAccountManager } from './mango.accountManager';
+import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 
 // TODO: Add these types
 // - Orderbook
@@ -100,8 +121,8 @@ export class MangoClobPerp {
     // @note: Mango allows for groups that include a selection of markets in one cross-margin basket,
     //        but we are only supporting one group per Gateway instance for now. You can change the
     //        group in the config file (mango.defaultGroup)
-    const perpMarkets = await this._client.perpGetMarkets(group);
-    for (const market of perpMarkets) {
+    const derivativeMarkets = await this._client.perpGetMarkets(group);
+    for (const market of derivativeMarkets) {
       const key = market.name;
       this.parsedMarkets[key] = market;
     }
@@ -161,6 +182,7 @@ export class MangoClobPerp {
         new PublicKey(address)
       );
       accounts.forEach((account) => {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         this.mangoAccounts[address]![account.name] = account;
         if (account.name === market) foundAccount = account;
       });
@@ -168,6 +190,7 @@ export class MangoClobPerp {
     }
 
     // get accounts and find accountNumber to use to create new MangoAccount
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const accounts = Object.values(this.mangoAccounts[address]!).filter(
       (account) => {
         return account !== undefined;
@@ -192,6 +215,7 @@ export class MangoClobPerp {
         `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`
       );
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.mangoAccounts[address]![market] = newAccount;
     return newAccount;
   }
@@ -249,25 +273,21 @@ export class MangoClobPerp {
 
   public async trades(
     req: PerpClobGetTradesRequest
-  ): Promise<Array<FillEvent>> {
-    const resp = await this.markets(req);
-    const market = resp.markets[req.market];
-    const fills = await this.loadFills(market);
+  ): Promise<Array<TradeHistory>> {
+    const mangoAccount = await this.getOrCreateMangoAccount(
+      req.address,
+      req.market
+    );
 
-    const trades = fills.fills.filter((fill) => {
-      return (
-        fill.maker.toString() === req.address ||
-        fill.taker.toString() === req.address
-      );
-    });
+    const trades = await getTradeHistory(mangoAccount.publicKey.toString());
 
     let targetTrade = undefined;
 
     if (req.orderId !== undefined) {
       for (const trade of trades) {
         if (
-          trade.makerOrderId.toString() === req.orderId ||
-          trade.takerOrderId.toString() === req.orderId
+          trade.activity_details.taker_client_order_id === req.orderId ||
+          trade.activity_details.taker_client_order_id === req.orderId
         ) {
           targetTrade = trade;
           break;
@@ -391,19 +411,40 @@ export class MangoClobPerp {
 
   public async positions(
     req: PerpClobPositionRequest
-  ): Promise<Array<Position>> {
-    // TODO: Add Position type
-    // TODO: Add fetchPositions method
+  ): Promise<Array<PerpPosition>> {
     // TODO: Review this method since we will need to create simulated isolated margin account
 
-    const marketIds = [];
+    const marketIndexs = [];
     for (const market of req.markets) {
-      marketIds.push(this.parsedMarkets[market].marketId);
+      marketIndexs.push(this.parsedMarkets[market].perpMarketIndex);
     }
 
-    const positions = await fetchPositions({
-      marketIds,
-      accountID: req.address,
+    const positions = await this.fetchPositions(marketIndexs, req.address);
+
+    return positions;
+  }
+
+  private async fetchPositions(
+    marketIndexs: PerpMarketIndex[],
+    ownerPk: string
+  ) {
+    const positions: PerpPosition[] = [];
+
+    marketIndexs.map((marketIndex) => {
+      const mangoAccount = this.getMangoAccount(
+        ownerPk,
+        marketIndex.toString()
+      );
+
+      if (mangoAccount === undefined) {
+        return;
+      }
+
+      const filterdPerpPositions = mangoAccount
+        .perpActive()
+        .filter((pp) => pp.marketIndex === marketIndex);
+
+      positions.concat(filterdPerpPositions);
     });
 
     return positions;
@@ -425,9 +466,12 @@ export class MangoClobPerp {
           this.mangoGroup,
           mangoAccount,
           market.perpMarketIndex,
-          order.side === 'BUY' ? PerpOrderSide.bid : PerpOrderSide.ask,
+          translateOrderSide(order.side),
           Number(order.price),
-          Number(order.amount)
+          Number(order.amount),
+          undefined,
+          order.clientOrderID,
+          translateOrderType(order.orderType)
         )
       );
     }
