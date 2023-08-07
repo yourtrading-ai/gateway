@@ -20,7 +20,8 @@
     "test:debug": "node --inspect node_modules/.bin/jest --watch --runInBand",
     "test:unit": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --verbose ./test/",
     "test:cov": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --coverage ./test/",
-    "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts"
+    "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts",
+    "test:mango": "jest -i --verbose test/connectors/mango/*.test.ts"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.32.2",
@@ -29,6 +30,8 @@
     "@cosmjs/proto-signing": "^0.31.1",
     "@cosmjs/stargate": "^0.31.1",
     "@cosmjs/tendermint-rpc": "^0.32.2",
+    "@blockworks-foundation/mango-v4": "^0.16.12",
+    "@coral-xyz/anchor": "^0.28.1-beta.1",
     "@crocswap/sdk": "^2.4.5",
     "@ethersproject/abstract-provider": "5.7.0",
     "@ethersproject/address": "5.7.0",
@@ -50,6 +53,8 @@
     "@pancakeswap/v3-sdk": "^3.7.0",
     "@pangolindex/sdk": "^1.1.0",
     "@perp/sdk-curie": "^1.16.0",
+    "@solana/spl-token": "^0.3.8",
+    "@solana/spl-token-registry": "^0.2.4574",
     "@sushiswap/sdk": "^5.0.0-canary.116",
     "@taquito/rpc": "^17.0.0",
     "@taquito/signer": "^17.0.0",
@@ -98,6 +103,8 @@
     "near-api-js": "1.0.0",
     "osmo-query": "16.5.2",
     "osmojs": "16.5.1",
+    "node-ts-cache": "^4.4.0",
+    "node-ts-cache-storage-memory": "^4.4.0",
     "promise-retry": "^2.0.1",
     "quickswap-sdk": "^3.0.8",
     "swagger-ui-express": "^4.1.6",

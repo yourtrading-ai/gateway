@@ -47,6 +47,7 @@ import { PancakeswapLP } from '../connectors/pancakeswap/pancakeswap.lp';
 import { XRPLCLOB } from '../connectors/xrpl/xrpl';
 import { Carbonamm } from '../connectors/carbon/carbonAMM';
 import { Balancer } from '../connectors/balancer/balancer';
+import { Solana } from '../chains/solana/solana';
 
 export type ChainUnion =
   | Algorand
@@ -57,27 +58,30 @@ export type ChainUnion =
   | Tezosish
   | XRPLish
   | Kujira
-  | Osmosis;
+  | Osmosis
+  | Solana;
 
 export type Chain<T> = T extends Algorand
   ? Algorand
   : T extends Cosmos
-    ? Cosmos
-    : T extends Ethereumish
-      ? Ethereumish
-      : T extends Nearish
-        ? Nearish
-        : T extends Xdcish
-          ? Xdcish
-          : T extends Tezosish
-            ? Tezosish
-            : T extends XRPLish
-              ? XRPLish
-              : T extends KujiraCLOB
-                ? KujiraCLOB
-                : T extends Osmosis
-                  ? Osmosis
-                  : never;
+  ? Cosmos
+  : T extends Ethereumish
+  ? Ethereumish
+  : T extends Nearish
+  ? Nearish
+  : T extends Xdcish
+  ? Xdcish
+  : T extends Tezosish
+  ? Tezosish
+  : T extends XRPLish
+  ? XRPLish
+  : T extends KujiraCLOB
+  ? KujiraCLOB
+  : T extends Osmosis
+  ? Osmosis
+  : T extends Solana
+  ? Solana
+  : never;
 
 export class UnsupportedChainException extends Error {
   constructor(message?: string) {
@@ -93,7 +97,7 @@ export class UnsupportedChainException extends Error {
 
 export async function getInitializedChain<T>(
   chain: string,
-  network: string,
+  network: string
 ): Promise<Chain<T>> {
   const chainInstance = await getChainInstance(chain, network);
 
@@ -110,7 +114,7 @@ export async function getInitializedChain<T>(
 
 export async function getChainInstance(
   chain: string,
-  network: string,
+  network: string
 ): Promise<ChainUnion | undefined> {
   let connection: ChainUnion | undefined;
 
@@ -146,6 +150,8 @@ export async function getChainInstance(
     connection = Kujira.getInstance(network);
   } else if (chain === 'telos') {
     connection = Telos.getInstance(network);
+  } else if (chain === 'solana') {
+    connection = Solana.getInstance(network);
   } else {
     connection = undefined;
   }
@@ -163,33 +169,33 @@ export type ConnectorUnion =
   | Plenty
   | XRPLCLOB
   | Curve
-  | KujiraCLOB
+  | KujiraCLOB;
 
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
   : T extends UniswapLPish
-    ? UniswapLPish
-    : T extends Perpish
-      ? Perpish
-      : T extends RefAMMish
-        ? RefAMMish
-        : T extends CLOBish
-          ? CLOBish
-          : T extends Tinyman
-            ? Tinyman
-            : T extends Plenty
-              ? Plenty
-              : T extends XRPLish
-                ? XRPLCLOB
-                : T extends KujiraCLOB
-                  ? KujiraCLOB
-                    : never;
+  ? UniswapLPish
+  : T extends Perpish
+  ? Perpish
+  : T extends RefAMMish
+  ? RefAMMish
+  : T extends CLOBish
+  ? CLOBish
+  : T extends Tinyman
+  ? Tinyman
+  : T extends Plenty
+  ? Plenty
+  : T extends XRPLish
+  ? XRPLCLOB
+  : T extends KujiraCLOB
+  ? KujiraCLOB
+  : never;
 
 export async function getConnector<T>(
   chain: string,
   network: string,
   connector: string | undefined,
-  address?: string,
+  address?: string
 ): Promise<Connector<T>> {
   let connectorInstance: ConnectorUnion;
 
