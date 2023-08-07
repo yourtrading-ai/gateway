@@ -26,7 +26,7 @@ export async function getPerpMarketHistory(
   perpMarket: PerpMarket,
   limit: number = 100,
   skip: number = 0
-) {
+): Promise<Array<any>> {
   // @todo: infer return type with postman request
   const response = await axios.get(
     MANGO_DATA_API + '/v4/stats/perp-market-history',

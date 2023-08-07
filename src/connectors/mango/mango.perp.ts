@@ -58,7 +58,7 @@ import {
 import Dict = NodeJS.Dict;
 // import { MangoAccountManager } from './mango.accountManager';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import {getFundingAccountHourly, getOneHourFundingRate} from "./mango.api";
+import {getFundingAccountHourly, getOneHourFundingRate, getPerpMarketHistory} from './mango.api';
 
 // TODO: Add these types
 // - Orderbook
@@ -67,9 +67,6 @@ import {getFundingAccountHourly, getOneHourFundingRate} from "./mango.api";
 // - DerivativeOrderHistory
 // - TradeDirection
 // - OrderType
-
-// TODO: Investigate what methods we should add in order to manage
-//       isolated margin accounts
 
 function enumFromStringValue<T>(
   enm: { [s: string]: T },
@@ -154,7 +151,7 @@ export class MangoClobPerp {
     });
   }
 
-  private getMangoAccount(
+  private getExistingMangoAccount(
     address: string,
     market: string
   ): MangoAccount | undefined {
@@ -172,7 +169,7 @@ export class MangoClobPerp {
     address: string,
     market: string
   ): Promise<MangoAccount> {
-    let foundAccount = this.getMangoAccount(address, market);
+    let foundAccount = this.getExistingMangoAccount(address, market);
     if (foundAccount) return foundAccount;
 
     // check if user has been initialized and accounts fetched
@@ -249,7 +246,12 @@ export class MangoClobPerp {
   }
 
   private async loadFills(market: PerpMarket): Promise<PerpMarketFills> {
-    //@todo: Find out where to get indexed, long-term historic fills & trades
+    const perpMarketHistory = await getPerpMarketHistory(market);
+    const recentFills = await market.loadFills(this._client);
+    const fills = perpMarketHistory.concat(recentFills.fills);
+
+    //@todo: Harmonize the fill data types
+    //@todo: Filter out overlapping fills
 
     return {
       marketName: market.name,
@@ -429,7 +431,7 @@ export class MangoClobPerp {
     const positions: PerpPosition[] = [];
 
     marketIndexs.map((marketIndex) => {
-      const mangoAccount = this.getMangoAccount(
+      const mangoAccount = this.getExistingMangoAccount(
         ownerPk,
         marketIndex.toString()
       );
