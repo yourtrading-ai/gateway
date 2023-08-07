@@ -127,3 +127,11 @@ configurations:
   $namespace carbon:
     configurationPath: carbon.yml
     schemaPath: carbon-schema.json
+  
+  $namespace solana:
+    configurationPath: solana.yml
+    schemaPath: solana-schema.json
+
+  $namespace mango:
+    configurationPath: mango.yml
+    schemaPath: mango-schema.json

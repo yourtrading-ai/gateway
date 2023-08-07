@@ -15,6 +15,7 @@ import {
 import { Cronos } from '../chains/cronos/cronos';
 import { Near } from '../chains/near/near';
 import { Algorand } from '../chains/algorand/algorand';
+import { Solana } from '../chains/solana/solana';
 import {
   getInitializedChain,
   UnsupportedChainException,
@@ -107,6 +108,11 @@ export async function getStatus(
     const kujiraConnections = Kujira.getConnectedInstances();
     connections = connections.concat(
       kujiraConnections ? Object.values(kujiraConnections) : []
+    );
+
+    const solanaConnections = Solana.getConnectedInstances();
+    connections = connections.concat(
+      solanaConnections ? Object.values(solanaConnections) : []
     );
   }
 

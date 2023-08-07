@@ -23,6 +23,7 @@ import { XRPLCLOBConfig } from './xrpl/xrpl.clob.config';
 import { KujiraConfig } from './kujira/kujira.config';
 import { QuipuswapConfig } from './quipuswap/quipuswap.config';
 import { CarbonConfig } from './carbon/carbon.config';
+import { MangoConfig } from './mango/mango.config';
 
 export namespace ConnectorsRoutes {
   export const router = Router();
@@ -175,6 +176,12 @@ export namespace ConnectorsRoutes {
             trading_type: CarbonConfig.config.tradingTypes,
             chain_type: CarbonConfig.config.chainType,
             available_networks: CarbonConfig.config.availableNetworks,
+          },
+          {
+            name: 'mango_perpetual',
+            trading_type: MangoConfig.config.tradingTypes('perp'),
+            chain_type: MangoConfig.config.chainType,
+            available_networks: MangoConfig.config.availableNetworks,
           },
         ],
       });

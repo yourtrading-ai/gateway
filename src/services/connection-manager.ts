@@ -44,6 +44,7 @@ import { PancakeswapLP } from '../connectors/pancakeswap/pancakeswap.lp';
 import { XRPLCLOB } from '../connectors/xrpl/xrpl';
 import { QuipuSwap } from '../connectors/quipuswap/quipuswap';
 import { Carbonamm } from '../connectors/carbon/carbonAMM';
+import { Solana } from '../chains/solana/solana';
 
 export type ChainUnion =
   | Algorand
@@ -53,7 +54,8 @@ export type ChainUnion =
   | Xdcish
   | Tezosish
   | XRPLish
-  | Kujira;
+  | Kujir
+  | Solana;
 
 export type Chain<T> = T extends Algorand
   ? Algorand
@@ -71,6 +73,8 @@ export type Chain<T> = T extends Algorand
   ? XRPLish
   : T extends KujiraCLOB
   ? KujiraCLOB
+  : T extends Solana
+  ? Solana
   : never;
 
 export class UnsupportedChainException extends Error {
@@ -134,6 +138,8 @@ export async function getChainInstance(
     connection = XRPL.getInstance(network);
   } else if (chain === 'kujira') {
     connection = Kujira.getInstance(network);
+  } else if (chain === 'solana') {
+    connection = Solana.getInstance(network);
   } else {
     connection = undefined;
   }

@@ -1,13 +1,15 @@
 import {
   DerivativeTrade,
   FundingPayment,
-  Orderbook,
-  PerpetualMarket,
-  Position,
+  PriceLevel,
 } from '@injectivelabs/sdk-ts';
 import { OrderType, Side } from '../amm/amm.requests';
 import { NetworkSelectionRequest } from '../services/common-interfaces';
 
+export interface Orderbook<T = PriceLevel[]> {
+  buys: T;
+  sells: T;
+}
 export interface ClobMarketsRequest extends NetworkSelectionRequest {
   market?: string;
 }
@@ -98,8 +100,8 @@ export type ClobDeleteOrderResponse = ClobPostOrderResponse;
 
 export type PerpClobMarketRequest = ClobMarketsRequest;
 
-export interface PerpClobMarkets {
-  [key: string]: PerpetualMarket;
+export interface PerpClobMarkets<T = any> {
+  [key: string]: T;
 }
 
 export interface PerpClobMarketResponse {
@@ -146,6 +148,7 @@ export interface CreatePerpOrderParam {
   side: Side;
   market: string;
   leverage: number;
+  clientOrderID?: number;
 }
 
 export interface PerpClobPostOrderRequest
@@ -171,6 +174,42 @@ export interface PerpClobBatchUpdateRequest extends NetworkSelectionRequest {
 }
 
 export type PerpClobBatchUpdateResponse = ClobPostOrderResponse;
+
+export function extractPerpOrderParams(
+  req:
+    | PerpClobDeleteOrderRequest
+    | PerpClobPostOrderRequest
+    | PerpClobBatchUpdateRequest
+): {
+  perpOrdersToCreate: CreatePerpOrderParam[];
+  perpOrdersToCancel: ClobDeleteOrderRequestExtract[];
+} {
+  let perpOrdersToCreate: CreatePerpOrderParam[] = [];
+  let perpOrdersToCancel: ClobDeleteOrderRequestExtract[] = [];
+  if ('createOrderParams' in req)
+    perpOrdersToCreate = perpOrdersToCreate.concat(
+      req.createOrderParams as CreatePerpOrderParam[]
+    );
+  if ('price' in req)
+    perpOrdersToCreate.push({
+      price: req.price,
+      amount: req.amount,
+      orderType: req.orderType,
+      side: req.side,
+      market: req.market,
+      leverage: req.leverage,
+    });
+  if ('cancelOrderParams' in req)
+    perpOrdersToCancel = perpOrdersToCancel.concat(
+      req.cancelOrderParams as ClobDeleteOrderRequestExtract[]
+    );
+  if ('orderId' in req)
+    perpOrdersToCancel.push({
+      orderId: req.orderId,
+      market: req.market,
+    });
+  return { perpOrdersToCreate, perpOrdersToCancel };
+}
 
 export interface PerpClobFundingInfoRequest extends NetworkSelectionRequest {
   market: string;
@@ -209,11 +248,11 @@ export interface PerpClobGetTradesRequest extends NetworkSelectionRequest {
   orderId: string;
 }
 
-export interface PerpClobGetTradesResponse {
+export interface PerpClobGetTradesResponse<T = DerivativeTrade> {
   network: string;
   timestamp: number;
   latency: number;
-  trades: Array<DerivativeTrade>;
+  trades: Array<T>;
 }
 
 export interface PerpClobFundingPaymentsRequest
@@ -222,11 +261,11 @@ export interface PerpClobFundingPaymentsRequest
   market: string;
 }
 
-export interface PerpClobFundingPaymentsResponse {
+export interface PerpClobFundingPaymentsResponse<T = FundingPayment> {
   network: string;
   timestamp: number;
   latency: number;
-  fundingPayments: Array<FundingPayment>;
+  fundingPayments: Array<T>;
 }
 
 export interface PerpClobPositionRequest extends NetworkSelectionRequest {
@@ -238,5 +277,11 @@ export interface PerpClobPositionResponse {
   network: string;
   timestamp: number;
   latency: number;
-  positions: Array<Position>;
+  positions:
+    | [
+        {
+          [key: string]: string;
+        }
+      ]
+    | [];
 }
