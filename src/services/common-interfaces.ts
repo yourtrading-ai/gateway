@@ -116,6 +116,7 @@ import { CurveTrade } from '../connectors/curve/curve';
 import { SerializableExtendedPool as CosmosSerializableExtendedPool } from '../chains/osmosis/osmosis.types';
 import { CarbonTrade } from '../connectors/carbon/carbonAMM';
 import { BalancerTrade } from '../connectors/balancer/balancer';
+import { Token as TokenMango } from '@blockworks-foundation/mango-v4';
 
 // TODO Check the possibility to have clob/solana/serum equivalents here
 //  Check this link https://hummingbot.org/developers/gateway/building-gateway-connectors/#5-add-sdk-classes-to-uniswapish-interface
@@ -125,13 +126,13 @@ export type Tokenish =
   | UniswapCoreToken
   | TokenQuickswap
   | TokenTraderjoe
-  | UniswapCoreToken
   | SushiToken
   | PancakeSwapToken
   | MMFToken
   | VVSToken
   | TokenXsswap
-  | CosmosAsset;
+  | CosmosAsset
+  | TokenMango;
 
 export type TokenAmountish = MMFTokenAmount | VVSTokenAmount;
 
@@ -274,7 +275,7 @@ export interface Uniswapish {
     quoteToken: Tokenish,
     amount: BigNumber,
     allowedSlippage?: string,
-    poolId?: string,
+    poolId?: string
   ): Promise<ExpectedTrade>;
 
   /**
@@ -292,7 +293,7 @@ export interface Uniswapish {
     baseToken: Tokenish,
     amount: BigNumber,
     allowedSlippage?: string,
-    poolId?: string,
+    poolId?: string
   ): Promise<ExpectedTrade>;
 
   /**
@@ -321,7 +322,7 @@ export interface Uniswapish {
     maxFeePerGas?: BigNumber,
     maxPriorityFeePerGas?: BigNumber,
     allowedSlippage?: string,
-    poolId?: string,
+    poolId?: string
   ): Promise<Transaction>;
 }
 
@@ -515,7 +516,7 @@ export interface UniswapLPish {
     nonce?: number,
     maxFeePerGas?: BigNumber,
     maxPriorityFeePerGas?: BigNumber,
-    poolId?: string,
+    poolId?: string
   ): Promise<Transaction>;
 
   /**
@@ -576,7 +577,7 @@ export interface UniswapLPish {
     fee: string,
     period: number,
     interval: number,
-    poolId?: string,
+    poolId?: string
   ): Promise<string[]>;
 }
 
