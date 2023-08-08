@@ -6,11 +6,12 @@
 ## TODOs
 ### Gateway
 Optional: Write unit tests along the way instead of at the end.
-1. [ ] Add initial functions to get general information from Mango market (orderbooks, trades, etc.)
-2. [ ] Add functions to get information about user's account (balances, orders, etc.) and implement helpers to track opened accounts.
-3. [ ] Add functions to place/cancel/modifiy orders.
-4. [ ] Get perp trading specific information (funding, margin, etc.) if not yet implemented.
-5. [ ] Align with Hummingbot's perp connector interface.
+1. [x] Add initial functions to get general information from Mango market (orderbooks, trades, etc.)
+2. [x] Add functions to get information about user's account (balances, orders, etc.) and implement helpers to track opened accounts.
+3. [x] Add functions to place/cancel/modifiy orders.
+4. [x] Get perp trading specific information (funding, margin, etc.) if not yet implemented.
+5. [ ] Manage user's margin account (deposit, withdraw, etc.).
+6. [ ] Align with Hummingbot's perp connector interface.
 
 ### Hummingbot Client
 1. [ ] Add Mango test script.

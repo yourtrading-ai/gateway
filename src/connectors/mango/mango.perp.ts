@@ -1,11 +1,9 @@
 import BN from 'bn.js';
 import LRUCache from 'lru-cache';
-import { Solana } from '../../chains/solana/solana'; // TODO: Add solana chain
-import { getSolanaConfig } from '../../chains/solana/solana.config'; // TODO: Add solana chain config
+import { Solana } from '../../chains/solana/solana';
+import { getSolanaConfig } from '../../chains/solana/solana.config';
 import {
-  FundingInfo,
   PerpClobDeleteOrderRequest,
-  PerpClobFundingInfoRequest,
   PerpClobFundingPaymentsRequest,
   PerpClobGetOrderRequest,
   PerpClobGetTradesRequest,
@@ -21,8 +19,6 @@ import {
   CreatePerpOrderParam,
   Orderbook,
   extractPerpOrderParams,
-  // PerpClobModifyOrderRequest,
-  // ModifyPerpOrderParam,
 } from '../../clob/clob.requests';
 import { NetworkSelectionRequest } from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
@@ -31,68 +27,40 @@ import {
   PerpMarket,
   Group,
   BookSide,
-  // FillEvent,
   MangoAccount,
-  // PerpOrderSide,
   PerpMarketIndex,
   PerpPosition,
 } from '@blockworks-foundation/mango-v4';
 import {
+  FundingPayment,
+  OneHourFundingRate,
   PerpMarketFills,
-  DerivativeOrderHistory,
-  TradeDirection,
-  TradeHistory,
+  PerpTradeActivity,
 } from './mango.types';
-import {
-  getTradeHistory,
-  translateOrderSide,
-  translateOrderType,
-} from './mango.utils';
-
-import {
-  AnchorProvider,
-  // Instruction,
-  // InstructionCoder,
-  Wallet,
-} from '@coral-xyz/anchor';
+import { translateOrderSide, translateOrderType } from './mango.utils';
+import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import Dict = NodeJS.Dict;
-// import { MangoAccountManager } from './mango.accountManager';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import {getFundingAccountHourly, getOneHourFundingRate, getPerpMarketHistory} from './mango.api';
-
-// TODO: Add these types
-// - Orderbook
-// - PerpetualMarket
-// - DerivativeTrade
-// - DerivativeOrderHistory
-// - TradeDirection
-// - OrderType
-
-function enumFromStringValue<T>(
-  enm: { [s: string]: T },
-  value: string
-): T | undefined {
-  return (Object.values(enm) as unknown as string[]).includes(value)
-    ? (value as unknown as T)
-    : undefined;
-}
+import { mangoDataApi, MangoDataApi } from './mango.api';
 
 export class MangoClobPerp {
   private static _instances: LRUCache<string, MangoClobPerp>;
   private readonly _chain: Solana;
   private readonly _client: MangoClient;
+  public derivativeApi: MangoDataApi;
   public mangoGroup: Group;
   public conf: MangoConfig.NetworkConfig;
 
   private _ready: boolean = false;
+  private _lastTradePrice: number = 0;
   public parsedMarkets: PerpClobMarkets<PerpMarket> = {};
   // @note: Contains all MangoAccounts, grouped by owner address and base asset
   public mangoAccounts: Dict<Dict<MangoAccount>> = {};
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
-    // @todo: See how to handle multiple Keypairs
     this._client = MangoClient.connectDefault(this._chain.rpcUrl);
+    this.derivativeApi = mangoDataApi;
     this.mangoGroup = MangoConfig.defaultGroup;
     this.conf = MangoConfig.config;
   }
@@ -204,7 +172,8 @@ export class MangoClobPerp {
     const newAccount = await this._client.createAndFetchMangoAccount(
       this.mangoGroup,
       accountNumber,
-      market
+      market,
+      2
     );
 
     if (newAccount === undefined)
@@ -246,13 +215,6 @@ export class MangoClobPerp {
   }
 
   private async loadFills(market: PerpMarket): Promise<PerpMarketFills> {
-    const perpMarketHistory = await getPerpMarketHistory(market);
-    const recentFills = await market.loadFills(this._client);
-    const fills = perpMarketHistory.concat(recentFills.fills);
-
-    //@todo: Harmonize the fill data types
-    //@todo: Filter out overlapping fills
-
     return {
       marketName: market.name,
       fills: await market.loadFills(this._client),
@@ -271,27 +233,30 @@ export class MangoClobPerp {
     const resp = await this.markets(req);
     const market = resp.markets[req.market];
     const fills = await this.loadFills(market);
-
-    return fills.fills[0].price.toString();
+    if (fills.fills.length > 0) this._lastTradePrice = fills.fills[0].price;
+    return this._lastTradePrice.toString();
   }
 
   public async trades(
     req: PerpClobGetTradesRequest
-  ): Promise<Array<TradeHistory>> {
+  ): Promise<Array<PerpTradeActivity>> {
     const mangoAccount = await this.getOrCreateMangoAccount(
       req.address,
       req.market
     );
 
-    const trades = await getTradeHistory(mangoAccount.publicKey.toString());
+    const trades = await this.derivativeApi.fetchPerpTradeHistory(
+      mangoAccount.publicKey.toBase58()
+    );
 
     let targetTrade = undefined;
 
     if (req.orderId !== undefined) {
       for (const trade of trades) {
         if (
-          trade.activity_details.taker_client_order_id === req.orderId ||
-          trade.activity_details.taker_client_order_id === req.orderId
+          trade.taker_client_order_id === req.orderId ||
+          trade.taker_order_id === req.orderId ||
+          trade.maker_order_id === req.orderId
         ) {
           targetTrade = trade;
           break;
@@ -308,38 +273,41 @@ export class MangoClobPerp {
 
   public async orders(
     req: PerpClobGetOrderRequest
-  ): Promise<Array<DerivativeOrderHistory>> {
-    // TODO: Add DerivativeOrderHistory type
-    // TODO: Add TradeDirection type
-    // TODO: Add fetchOrderHistory method
-
-    const marketId = this.parsedMarkets[req.market].marketId;
-    const orderTypes = [];
-    if (req.orderTypes) {
-      for (const orderTypeString of req.orderTypes.split(',')) {
-        const orderType = enumFromStringValue(OrderSide, orderTypeString);
-        if (orderType !== undefined) {
-          orderTypes.push(orderType);
-        }
-      }
-    }
-    let direction = undefined;
-    if (req.direction) {
-      direction = enumFromStringValue(TradeDirection, req.direction);
-    }
-
+  ): Promise<Array<PerpTradeActivity>> {
+    // @todo: currently returns the same as trades, is it a problem tho?
+    const mangoAccount = await this.getOrCreateMangoAccount(
+      req.address,
+      req.market
+    );
+    const accountAddress = mangoAccount.publicKey.toBase58();
     let targetOrder = undefined;
+    let orders = await this.derivativeApi.fetchPerpTradeHistory(accountAddress);
 
-    const orders = await fetchOrderHistory({
-      account: req.address,
-      marketId,
-      direction,
-      orderTypes,
-    });
+    if (req.limit) {
+      if (req.limit > orders.length && orders.length === 10000) {
+        // @note: paginate over multiple requests
+        const allOrders = orders;
+        let page = 1;
+        while (orders.length === 10000 && allOrders.length < req.limit) {
+          orders = await this.derivativeApi.fetchPerpTradeHistory(
+            mangoAccount.publicKey.toBase58(),
+            page
+          );
+          allOrders.push(...orders);
+          page++;
+        }
+        orders = allOrders;
+      }
+      orders.slice(0, req.limit);
+    }
 
     if (req.orderId !== undefined) {
       for (const order of orders) {
-        if (order.orderHash === req.orderId) {
+        if (
+          order.taker_client_order_id === req.orderId ||
+          order.taker_order_id === req.orderId ||
+          order.maker_order_id === req.orderId
+        ) {
           targetOrder = order;
           break;
         }
@@ -397,20 +365,33 @@ export class MangoClobPerp {
     };
   }
 
-  public async fundingInfo(): Promise<any> {
-    // @todo: infer return type
-    return await getOneHourFundingRate(this.mangoGroup);
+  public async fundingInfo(): Promise<Array<OneHourFundingRate>> {
+    return await this.derivativeApi.fetchOneHourFundingRate(
+      this.mangoGroup.publicKey.toBase58()
+    );
   }
 
   public async fundingPayments(
     req: PerpClobFundingPaymentsRequest
-  ): Promise<Array<any>> {
-    // @todo: infer return type
+  ): Promise<Array<FundingPayment>> {
     const mangoAccount = await this.getOrCreateMangoAccount(
       req.address,
       req.market
     );
-    return await getFundingAccountHourly(mangoAccount);
+    const response = await this.derivativeApi.fetchFundingAccountHourly(
+      mangoAccount.publicKey.toBase58()
+    );
+    const result: Record<string, Array<FundingPayment>> = {};
+    Object.entries(response).forEach(([key, value]) => {
+      result[key] = Object.entries(value).map(([key, value]) => {
+        return {
+          marketName: req.market,
+          timestamp: Date.parse(key),
+          amount: (value.long_funding + value.short_funding).toString(),
+        };
+      });
+    });
+    return result[req.market];
   }
 
   public async positions(
@@ -457,7 +438,7 @@ export class MangoClobPerp {
     const perpOrdersToCreate = [];
     for (const order of orders) {
       const mangoAccount = await this.getOrCreateMangoAccount(
-        provider.wallet.publicKey.toString(),
+        provider.wallet.publicKey.toBase58(),
         order.market
       );
       const market = this.parsedMarkets[order.market];
@@ -485,7 +466,7 @@ export class MangoClobPerp {
     const perpOrdersToCancel = [];
     for (const order of orders) {
       const mangoAccount = await this.getOrCreateMangoAccount(
-        provider.wallet.publicKey.toString(),
+        provider.wallet.publicKey.toBase58(),
         order.market
       );
       const market = this.parsedMarkets[order.market];
