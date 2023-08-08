@@ -1,80 +1,109 @@
-import {MangoAccount, PerpMarket, Group as MangoGroup} from '@blockworks-foundation/mango-v4';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
+import {
+  AccountFunding,
+  PerpTradeActivity,
+  OneHourFundingRate,
+  TradeHistory,
+} from './mango.types';
 
-const MANGO_DATA_API: string = 'https://api.mngo.cloud/data/';
+export class MangoDataApi {
+  private readonly MANGO_DATA_API: string;
 
-export async function getPerpTradeHistory(
-  mangoAccount: MangoAccount,
-  limit: number = 10000,
-  skip: number = 0
-) {
-  // @todo: infer return type with postman request
-  const response = await axios.get(
-    MANGO_DATA_API + '/v4/stats/perp-trade-history',
-    {
-      params: {
-        'mango-account': mangoAccount.publicKey.toString(),
-        limit: limit,
-        skip: skip,
-      },
-    }
-  );
-  return response.data;
+  constructor(apiBaseUrl: string) {
+    this.MANGO_DATA_API = apiBaseUrl;
+  }
+
+  async fetchPerpTradeHistory(
+    mangoAccount: string,
+    limit: number = 10000,
+    skip: number = 0
+  ): Promise<Array<PerpTradeActivity>> {
+    const response = await axios.get(
+      this.MANGO_DATA_API + '/v4/stats/perp-trade-history',
+      {
+        params: {
+          'mango-account': mangoAccount,
+          limit: limit,
+          skip: skip,
+        },
+      }
+    );
+    return response.data;
+  }
+
+  async fetchPerpMarketHistory(
+    perpMarketAccount: string,
+    limit: number = 100,
+    skip: number = 0
+  ): Promise<Array<PerpTradeActivity>> {
+    const response = await axios.get(
+      this.MANGO_DATA_API + '/v4/stats/perp-market-history',
+      {
+        params: {
+          'perp-market': perpMarketAccount,
+          limit: limit,
+          skip: skip,
+        },
+      }
+    );
+    return response.data;
+  }
+
+  async fetchFundingAccountHourly(
+    mangoAccount: string,
+    limit: number = 100,
+    skip: number = 0
+  ): Promise<Record<string, Record<string, AccountFunding>>> {
+    const response: AxiosResponse<Record<string, Record<string, any>>> =
+      await axios.get(
+        this.MANGO_DATA_API + '/v4/stats/funding-account-hourly',
+        {
+          params: {
+            'mango-account': mangoAccount,
+            limit: limit,
+            skip: skip,
+          },
+        }
+      );
+    return response.data;
+  }
+
+  async fetchOneHourFundingRate(
+    mangoGroup: string,
+    limit: number = 100,
+    skip: number = 0
+  ): Promise<Array<OneHourFundingRate>> {
+    const response = await axios.get(
+      this.MANGO_DATA_API + '/v4/one-hour-funding-rate',
+      {
+        params: {
+          'mango-group': mangoGroup,
+          limit: limit,
+          skip: skip,
+        },
+      }
+    );
+    return response.data;
+  }
+
+  async fetchTradeHistory(
+    mangoAccount: string,
+    limit: number = 100,
+    skip: number = 0
+  ): Promise<TradeHistory[]> {
+    const response = await axios.get(
+      this.MANGO_DATA_API + '/v4/stats/trade-history',
+      {
+        params: {
+          'mango-account': mangoAccount,
+          limit: limit,
+          skip: skip,
+        },
+      }
+    );
+    return response.data;
+  }
 }
 
-export async function getPerpMarketHistory(
-  perpMarket: PerpMarket,
-  limit: number = 100,
-  skip: number = 0
-): Promise<Array<any>> {
-  // @todo: infer return type with postman request
-  const response = await axios.get(
-    MANGO_DATA_API + '/v4/stats/perp-market-history',
-    {
-      params: {
-        'perp-market': perpMarket.publicKey.toString(),
-        limit: limit,
-        skip: skip,
-      },
-    }
-  );
-  return response.data;
-}
-
-export async function getFundingAccountHourly(
-  mangoAccount: MangoAccount,
-  limit: number = 100,
-  skip: number = 0
-) {
-  // @todo: infer return type with postman request
-  const response = await axios.get(
-    MANGO_DATA_API + '/v4/stats/funding-account-hourly',
-    {
-      params: {
-        'mango-account': mangoAccount.publicKey.toString(),
-        limit: limit,
-        skip: skip,
-      },
-    }
-  );
-  return response.data;
-}
-
-export async function getOneHourFundingRate(
-  mangoGroup: MangoGroup,
-  limit: number = 100,
-  skip: number = 0
-) {
-  // @todo: infer return type with postman request
-  const response = await axios.get(
-    MANGO_DATA_API + '/v4/stats/one-hour-funding-rate',
-    {
-      params: {
-        'mango-group': mangoGroup.publicKey.toString(),
-        limit: limit,
-        skip: skip,
-      },
-    }
-  );
-  return response.data;
-}
+export const mangoDataApi = new MangoDataApi('https://api.mngo.cloud/data');
+export default mangoDataApi;
