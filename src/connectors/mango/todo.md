@@ -1,6 +1,6 @@
 # Mango Connector TODOs
 ## Directions/Goals
-1. [ ] Create a Mango connector on **Gateway** that exposes an API similar to Injective's perp connector.
+1. [x] Create a Mango connector on **Gateway** that exposes an API similar to Injective's perp connector.
 2. [ ] Create a **test script** on Hummingbot client that uses the Mango connector to do simple market making on Mango markets and which can be used by experienced traders to write their own strategies.
 3. [ ] **Integrate** with the Hummingbot client to allow users to use any Hummingbot strategy and freely configure those to trade on Mango markets.
 ## TODOs
@@ -10,8 +10,11 @@ Optional: Write unit tests along the way instead of at the end.
 2. [x] Add functions to get information about user's account (balances, orders, etc.) and implement helpers to track opened accounts.
 3. [x] Add functions to place/cancel/modifiy orders.
 4. [x] Get perp trading specific information (funding, margin, etc.) if not yet implemented.
-5. [ ] Manage user's margin account (deposit, withdraw, etc.).
-6. [ ] Align with Hummingbot's perp connector interface.
+5. [ ] Review Injective Connector and need for isolated margin account.
+6. [ ] Seperate spot from perp trading on Mango.
+7. [ ] Manage user's margin account (deposit, withdraw, etc.).
+8. [ ] Check Solana chain integration to Gateway.
+9. [ ] Align with Hummingbot's perp connector interface.
 
 ### Hummingbot Client
 1. [ ] Add Mango test script.
@@ -22,5 +25,5 @@ Optional: Write unit tests along the way instead of at the end.
 6. [ ] Update Hummingbot docs to include Mango connector.
 7. [ ] Release Mango connector with a PRP to Hummingbot community.
 8. [ ] Prepare community call to present Mango connector.
-8. ???
-9. Profit.
+9. [ ] ???
+10. [ ] Profit.
