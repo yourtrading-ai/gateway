@@ -172,7 +172,7 @@ export class MangoClobPerp {
     const newAccount = await this._client.createAndFetchMangoAccount(
       this.mangoGroup,
       accountNumber,
-      market,
+      market,  // @todo: use asset symbol instead of market name?
       2
     );
 
@@ -326,6 +326,7 @@ export class MangoClobPerp {
     quantity: string,
     leverage: number
   ): BN {
+    // @todo: update with the asset/liability weight multipliers
     // margin = (price * quantity) / leverage
     const priceBig = new BN(price);
     const quantityBig = new BN(quantity);
