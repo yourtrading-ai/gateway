@@ -4104,6 +4104,14 @@
     tiny-warning "^1.0.3"
     toformat "^2.0.0"
 
+"@switchboard-xyz/sbv2-lite@^0.1.6":
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/@switchboard-xyz/sbv2-lite/-/sbv2-lite-0.1.6.tgz#dc3fbb5b3b028dbd3c688b991bcc48a670131ddb"
+  integrity sha512-yNNBBPpqefrf6QaUw7pKj1MYOtITaH5lqpGKdSMOqzGmtTOCBPI9P9Hz/ZfQEzbuRIUws1aNEazxYzitBo1q7Q==
+  dependencies:
+    "@project-serum/anchor" "^0.24.2"
+    big.js "^6.1.1"
+
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@szmarczak/http-timer/-/http-timer-1.1.2.tgz#b1665e2c461a2cd92f4c1bbf50d5454de0d4b421"
