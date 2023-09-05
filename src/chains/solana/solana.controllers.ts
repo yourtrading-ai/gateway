@@ -20,6 +20,7 @@ import {
   SolanaTokenResponse,
 } from './solana.requests';
 
+// TODO: make the response conform to HB standard
 export async function balances(
   solanaish: Solanaish,
   req: SolanaBalanceRequest
@@ -68,6 +69,7 @@ const toSolanaBalances = (
   return solanaBalances;
 };
 
+// TODO: make the response conform to HB standard
 export async function poll(
   solanaish: Solanaish,
   req: SolanaPollRequest
@@ -91,7 +93,8 @@ export async function poll(
   };
 }
 
-export async function token(
+// TODO: make the response conform to HB standard
+export async function getTokens(
   solanaish: Solanaish,
   req: SolanaTokenRequest
 ): Promise<SolanaTokenResponse> {
@@ -128,6 +131,7 @@ export async function token(
   };
 }
 
+// TODO: Review this function as it is not needed now
 export async function getOrCreateTokenAccount(
   solanaish: Solanaish,
   req: SolanaTokenRequest

@@ -48,6 +48,7 @@ import { XRPLCLOB } from '../connectors/xrpl/xrpl';
 import { Carbonamm } from '../connectors/carbon/carbonAMM';
 import { Balancer } from '../connectors/balancer/balancer';
 import { Solana } from '../chains/solana/solana';
+import { MangoClobPerp } from '../connectors/mango/mango.perp';
 
 export type ChainUnion =
   | Algorand
@@ -169,7 +170,8 @@ export type ConnectorUnion =
   | Plenty
   | XRPLCLOB
   | Curve
-  | KujiraCLOB;
+  | KujiraCLOB
+  | MangoClobPerp;
 
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
@@ -189,6 +191,8 @@ export type Connector<T> = T extends Uniswapish
   ? XRPLCLOB
   : T extends KujiraCLOB
   ? KujiraCLOB
+  : T extends MangoClobPerp
+  ? MangoClobPerp
   : never;
 
 export async function getConnector<T>(
@@ -243,6 +247,8 @@ export async function getConnector<T>(
     connectorInstance = Tinyman.getInstance(network);
   } else if (connector === 'plenty') {
     connectorInstance = Plenty.getInstance(network);
+  } else if (chain === 'solana' && connector === 'mango') {
+    connectorInstance = MangoClobPerp.getInstance(chain, network);
   } else {
     throw new Error('unsupported chain or connector');
   }

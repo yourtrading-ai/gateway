@@ -21,7 +21,7 @@
     "test:unit": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --verbose ./test/",
     "test:cov": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --coverage ./test/",
     "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts",
-    "test:mango": "jest -i --verbose test/connectors/mango/*.test.ts"
+    "test:mango": "NODE_OPTIONS='--stack-trace-limit=10000' jest -i --verbose test/connectors/mango/*.test.ts"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.32.2",

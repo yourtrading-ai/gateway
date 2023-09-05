@@ -21,8 +21,6 @@ import {
 import bs58 from 'bs58';
 import { BigNumber } from 'ethers';
 import fse from 'fs-extra';
-import NodeCache from 'node-cache';
-// import { MemoryStorage } from 'node-ts-cache-storage-memory';
 import {
   getNotNullOrThrowError,
   runWithRetryAndTimeout,
@@ -32,18 +30,13 @@ import { ConfigManagerCertPassphrase } from '../../services/config-manager-cert-
 import { logger } from '../../services/logger';
 import { Config, getSolanaConfig } from './solana.config';
 import { TransactionResponseStatusCode } from './solana.requests';
+import { promises as fs } from 'fs';
 import axios from 'axios';
-
-const crypto = require('crypto').webcrypto;
-
-// const caches = {
-//   instances: new CacheContainer(new MemoryStorage()),
-// };
+import crypto from 'crypto';
 
 export class Solana implements Solanaish {
   public rpcUrl;
   public transactionLamports;
-  public cache: NodeCache;
 
   protected tokenList: TokenInfo[] = [];
   private _config: Config;
@@ -70,10 +63,9 @@ export class Solana implements Solanaish {
 
     this._config = getSolanaConfig('solana', network);
 
-    this.rpcUrl = this._config.network.nodeUrl;
+    this.rpcUrl = this._config.network.nodeURL;
 
     this._connection = new Connection(this.rpcUrl, 'processed' as Commitment);
-    this.cache = new NodeCache({ stdTTL: 3600 }); // set default cache ttl to 1hr
 
     this._nativeTokenSymbol = 'SOL';
     this._tokenProgramAddress = new PublicKey(this._config.tokenProgram);
@@ -145,7 +137,8 @@ export class Solana implements Solanaish {
   async getTokenList(): Promise<TokenInfo[]> {
     const tokens: TokenInfo[] =
       await new CustomStaticTokenListResolutionStrategy(
-        this._config.tokens.url
+        this._config.network.tokenListSource,
+        this._config.network.tokenListType
       ).resolve();
 
     const tokenListContainer = new TokenListContainer(tokens);
@@ -249,100 +242,50 @@ export class Solana implements Solanaish {
       if (!passphrase) {
         throw new Error('missing passphrase');
       }
-      this._keypairs[address] = await this.decrypt(
-        encryptedPrivateKey,
-        passphrase
-      );
+      const decrypted = await this.decrypt(encryptedPrivateKey, passphrase);
+
+      const enc = new TextEncoder();
+      this._keypairs[address] = Keypair.fromSecretKey(enc.encode(decrypted));
     }
 
     return this._keypairs[address];
   }
 
-  private static async getKeyMaterial(password: string) {
-    const enc = new TextEncoder();
-    return await crypto.subtle.importKey(
-      'raw',
-      enc.encode(password),
-      'PBKDF2',
-      false,
-      ['deriveBits', 'deriveKey']
-    );
+  async encrypt(secret: string, password: string): Promise<string> {
+    const algorithm = 'aes-256-ctr';
+    const iv = crypto.randomBytes(16);
+    const salt = crypto.randomBytes(32);
+    const key = crypto.pbkdf2Sync(password, salt, 5000, 32, 'sha512');
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    const encrypted = Buffer.concat([cipher.update(secret), cipher.final()]);
+
+    const ivJSON = iv.toJSON();
+    const saltJSON = salt.toJSON();
+    const encryptedJSON = encrypted.toJSON();
+
+    return JSON.stringify({
+      algorithm,
+      iv: ivJSON,
+      salt: saltJSON,
+      encrypted: encryptedJSON,
+    });
   }
 
-  private static async getKey(
-    keyAlgorithm: {
-      salt: Uint8Array;
-      name: string;
-      iterations: number;
-      hash: string;
-    },
-    keyMaterial: CryptoKey
-  ) {
-    return await crypto.subtle.deriveKey(
-      keyAlgorithm,
-      keyMaterial,
-      { name: 'AES-GCM', length: 256 },
-      true,
-      ['encrypt', 'decrypt']
-    );
-  }
+  async decrypt(encryptedSecret: string, password: string): Promise<string> {
+    const hash = JSON.parse(encryptedSecret);
+    const salt = Buffer.from(hash.salt, 'utf8');
+    const iv = Buffer.from(hash.iv, 'utf8');
 
-  // Takes a base58 encoded privateKey and saves it to a json
-  async encrypt(privateKey: string, password: string): Promise<string> {
-    const iv = crypto.getRandomValues(new Uint8Array(16));
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const keyMaterial = await Solana.getKeyMaterial(password);
-    const keyAlgorithm = {
-      name: 'PBKDF2',
-      salt: salt,
-      iterations: 500000,
-      hash: 'SHA-256',
-    };
-    const key = await Solana.getKey(keyAlgorithm, keyMaterial);
-    const cipherAlgorithm = {
-      name: 'AES-GCM',
-      iv: iv,
-    };
-    const enc = new TextEncoder();
-    const ciphertext: Uint8Array = (await crypto.subtle.encrypt(
-      cipherAlgorithm,
-      key,
-      enc.encode(privateKey)
-    )) as Uint8Array;
-    return JSON.stringify(
-      {
-        keyAlgorithm,
-        cipherAlgorithm,
-        ciphertext: new Uint8Array(ciphertext),
-      },
-      (key, value) => {
-        switch (key) {
-          case 'ciphertext':
-          case 'salt':
-          case 'iv':
-            return bs58.encode(Uint8Array.from(Object.values(value)));
-          default:
-            return value;
-        }
-      }
-    );
-  }
+    const key = crypto.pbkdf2Sync(password, salt, 5000, 32, 'sha512');
 
-  async decrypt(encryptedPrivateKey: any, password: string): Promise<Keypair> {
-    const keyMaterial = await Solana.getKeyMaterial(password);
-    const key = await Solana.getKey(
-      encryptedPrivateKey.keyAlgorithm,
-      keyMaterial
-    );
-    const decrypted = await crypto.subtle.decrypt(
-      encryptedPrivateKey.cipherAlgorithm,
-      key,
-      encryptedPrivateKey.ciphertext
-    );
+    const decipher = crypto.createDecipheriv(hash.algorithm, key, iv);
 
-    const dec = new TextDecoder();
-    dec.decode(decrypted);
-    return Keypair.fromSecretKey(bs58.decode(dec.decode(decrypted)));
+    const decrpyted = Buffer.concat([
+      decipher.update(Buffer.from(hash.encrypted, 'hex')),
+      decipher.final(),
+    ]);
+
+    return decrpyted.toString();
   }
 
   async getBalances(wallet: Keypair): Promise<Record<string, TokenValue>> {
@@ -501,26 +444,18 @@ export class Solana implements Solanaish {
   async getTransaction(
     payerSignature: string
   ): Promise<VersionedTransactionResponse | null> {
-    if (this.cache.keys().includes(payerSignature)) {
-      // If it's in the cache, return the value in cache, whether it's null or not
-      return this.cache.get(payerSignature) as TransactionResponse;
-    } else {
-      // If it's not in the cache,
-      const fetchedTx = runWithRetryAndTimeout(
-        this._connection,
-        this._connection.getTransaction,
-        [
-          payerSignature,
-          {
-            commitment: 'confirmed',
-          },
-        ]
-      );
+    const fetchedTx = runWithRetryAndTimeout(
+      this._connection,
+      this._connection.getTransaction,
+      [
+        payerSignature,
+        {
+          commitment: 'confirmed',
+        },
+      ]
+    );
 
-      this.cache.set(payerSignature, fetchedTx); // Cache the fetched receipt, whether it's null or not
-
-      return fetchedTx;
-    }
+    return fetchedTx;
   }
 
   // returns an ethereum TransactionResponseStatusCode for a txData.
@@ -541,12 +476,6 @@ export class Solana implements Solanaish {
       //  based on how many blocks ago the Transaction was
     }
     return txStatus;
-  }
-
-  // caches transaction receipt once they arrive
-  cacheTransactionReceipt(tx: TransactionResponse) {
-    // first (payer) signature is used as cache key since it is unique enough
-    this.cache.set(tx.transaction.signatures[0], tx);
   }
 
   public getTokenBySymbol(tokenSymbol: string): TokenInfo | undefined {
@@ -614,10 +543,10 @@ export class Solana implements Solanaish {
 class CustomStaticTokenListResolutionStrategy {
   resolve: () => Promise<any>;
 
-  constructor(url: string) {
+  constructor(url: string, type: string) {
     this.resolve = async () => {
-      if (!url.startsWith('https')) {
-        return require(url)['tokens'];
+      if (type === 'FILE') {
+        return JSON.parse(await fs.readFile(url, 'utf8'))['tokens'];
       } else {
         return (await runWithRetryAndTimeout<any>(axios, axios.get, [url]))
           .data['tokens'];
