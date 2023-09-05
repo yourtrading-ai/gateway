@@ -2,7 +2,7 @@ import { AvailableNetworks } from '../../services/config-manager-types';
 import { ConfigManagerV2 } from '../../services/config-manager-v2';
 
 export namespace MangoConfig {
-  export const defaultGroup: any =
+  export const defaultGroup: string =
     ConfigManagerV2.getInstance().get('mango.defaultGroup');
 
   export const tradeHistoryApiUrl: any = ConfigManagerV2.getInstance().get(

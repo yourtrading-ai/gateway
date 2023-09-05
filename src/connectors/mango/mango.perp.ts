@@ -48,6 +48,7 @@ export class MangoClobPerp {
   private readonly _chain: Solana;
   private readonly _client: MangoClient;
   public derivativeApi: MangoDataApi;
+  public mangoGroupPublicKey: PublicKey;
   public mangoGroup: Group;
   public conf: MangoConfig.NetworkConfig;
 
@@ -61,7 +62,8 @@ export class MangoClobPerp {
     this._chain = Solana.getInstance(network);
     this._client = MangoClient.connectDefault(this._chain.rpcUrl);
     this.derivativeApi = mangoDataApi;
-    this.mangoGroup = MangoConfig.defaultGroup;
+    this.mangoGroupPublicKey = new PublicKey(MangoConfig.defaultGroup);
+    this.mangoGroup = {} as Group;
     this.conf = MangoConfig.config;
   }
 
@@ -97,6 +99,7 @@ export class MangoClobPerp {
   public async init() {
     if (!this._chain.ready() || Object.keys(this.parsedMarkets).length === 0) {
       await this._chain.init();
+      this.mangoGroup = await this._client.getGroup(this.mangoGroupPublicKey);
       await this.loadMarkets(this.mangoGroup);
       this._ready = true;
     }
@@ -172,7 +175,7 @@ export class MangoClobPerp {
     const newAccount = await this._client.createAndFetchMangoAccount(
       this.mangoGroup,
       accountNumber,
-      market,  // @todo: use asset symbol instead of market name?
+      market, // @todo: use asset symbol instead of market name?
       2
     );
 

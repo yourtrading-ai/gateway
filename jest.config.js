@@ -47,4 +47,9 @@ module.exports = {
       '<rootDir>/node_modules/@bancor/carbon-sdk/dist/chain-cache/index.cjs',
   },
   testPathIgnorePatterns: ['/node_modules/', 'test-helpers'],
+  globals: {
+    crypto: {
+      getRandomValues: (arr) => require('crypto').randomBytes(arr.length),
+    },
+  },
 };

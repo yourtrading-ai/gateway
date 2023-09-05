@@ -1,51 +1,54 @@
+import { TokenListType } from '../../services/base';
 import { ConfigManagerV2 } from '../../services/config-manager-v2';
-
-export interface NetworkConfig {
+interface NetworkConfig {
   name: string;
-  nodeUrl: string;
+  nodeURL: string;
+  tokenListType: TokenListType;
+  tokenListSource: string;
+  nativeCurrencySymbol: string;
   maxLRUCacheInstances: number;
-}
-
-export interface TokenConfig {
-  url: string;
 }
 
 export interface Config {
   network: NetworkConfig;
-  nativeCurrencySymbol: string;
   tokenProgram: string;
   transactionLamports: number;
   lamportsToSol: number;
   timeToLive: number;
-  customNodeUrl: string | undefined;
-  tokens: TokenConfig;
 }
 
 export function getSolanaConfig(
   chainName: string,
   networkName: string
 ): Config {
-  const configManager = ConfigManagerV2.getInstance();
   return {
     network: {
       name: networkName,
-      nodeUrl: configManager.get(
+      nodeURL: ConfigManagerV2.getInstance().get(
         chainName + '.networks.' + networkName + '.nodeURL'
       ),
-      maxLRUCacheInstances: configManager.get(
+      tokenListType: ConfigManagerV2.getInstance().get(
+        chainName + '.networks.' + networkName + '.tokenListType'
+      ),
+      tokenListSource: ConfigManagerV2.getInstance().get(
+        chainName + '.networks.' + networkName + '.tokenListSource'
+      ),
+      nativeCurrencySymbol: ConfigManagerV2.getInstance().get(
+        chainName + '.networks.' + networkName + '.nativeCurrencySymbol'
+      ),
+      maxLRUCacheInstances: ConfigManagerV2.getInstance().get(
         chainName + '.networks.' + networkName + '.maxLRUCacheInstances'
       ),
     },
-    nativeCurrencySymbol: configManager.get(
-      chainName + '.networks.' + networkName + '.nativeCurrencySymbol'
+    tokenProgram: ConfigManagerV2.getInstance().get(
+      chainName + '.tokenProgram'
     ),
-    tokenProgram: configManager.get(chainName + '.tokenProgram'),
-    transactionLamports: configManager.get(chainName + '.transactionLamports'),
-    lamportsToSol: configManager.get(chainName + '.lamportsToSol'),
-    timeToLive: configManager.get(chainName + '.timeToLive'),
-    customNodeUrl: configManager.get(chainName + '.customNodeUrl'),
-    tokens: {
-      url: configManager.get(chainName + '.tokens.url'),
-    },
+    transactionLamports: ConfigManagerV2.getInstance().get(
+      chainName + '.transactionLamports'
+    ),
+    lamportsToSol: ConfigManagerV2.getInstance().get(
+      chainName + '.lamportsToSol'
+    ),
+    timeToLive: ConfigManagerV2.getInstance().get(chainName + '.timeToLive'),
   };
 }

@@ -45,6 +45,7 @@ import { XRPLCLOB } from '../connectors/xrpl/xrpl';
 import { QuipuSwap } from '../connectors/quipuswap/quipuswap';
 import { Carbonamm } from '../connectors/carbon/carbonAMM';
 import { Solana } from '../chains/solana/solana';
+import { MangoClobPerp } from '../connectors/mango/mango.perp';
 
 export type ChainUnion =
   | Algorand
@@ -158,7 +159,8 @@ export type ConnectorUnion =
   | XRPLCLOB
   | Curve
   | KujiraCLOB
-  | QuipuSwap;
+  | QuipuSwap
+  | MangoClobPerp;
 
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
@@ -180,6 +182,8 @@ export type Connector<T> = T extends Uniswapish
   ? KujiraCLOB
   : T extends QuipuSwap
   ? QuipuSwap
+  : T extends MangoClobPerp
+  ? MangoClobPerp
   : never;
 
 export async function getConnector<T>(
@@ -243,6 +247,8 @@ export async function getConnector<T>(
     connectorInstance = QuipuSwap.getInstance(network);
   } else if (chain === 'ethereum' && connector === 'carbonamm') {
     connectorInstance = Carbonamm.getInstance(chain, network);
+  } else if (chain === 'solana' && connector === 'mango') {
+    connectorInstance = MangoClobPerp.getInstance(chain, network);
   } else {
     throw new Error('unsupported chain or connector');
   }
