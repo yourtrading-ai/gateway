@@ -21,7 +21,7 @@
     "test:unit": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --verbose ./test/",
     "test:cov": "NODE_OPTIONS=--max_old_space_size=10240 jest --runInBand --coverage ./test/",
     "test:scripts": "jest -i --verbose ./test-scripts/*.test.ts",
-    "test:mango": "NODE_OPTIONS='--stack-trace-limit=10000' jest -i --verbose test/connectors/mango/*.test.ts"
+    "test:mango": "jest -i --verbose test/connectors/mango/*.test.ts"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.32.2",
@@ -30,8 +30,8 @@
     "@cosmjs/proto-signing": "^0.31.1",
     "@cosmjs/stargate": "^0.31.1",
     "@cosmjs/tendermint-rpc": "^0.32.2",
-    "@blockworks-foundation/mango-v4": "^0.16.12",
-    "@coral-xyz/anchor": "^0.28.1-beta.1",
+    "@blockworks-foundation/mango-v4": "^0.19.27",
+    "@coral-xyz/anchor": "^0.28.1-beta.2",
     "@crocswap/sdk": "^2.4.5",
     "@ethersproject/abstract-provider": "5.7.0",
     "@ethersproject/address": "5.7.0",

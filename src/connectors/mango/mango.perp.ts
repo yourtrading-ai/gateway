@@ -26,10 +26,10 @@ import {
   MangoClient,
   PerpMarket,
   Group,
-  BookSide,
   MangoAccount,
   PerpMarketIndex,
   PerpPosition,
+  MANGO_V4_ID,
 } from '@blockworks-foundation/mango-v4';
 import {
   FundingPayment,
@@ -40,7 +40,12 @@ import {
 import { translateOrderSide, translateOrderType } from './mango.utils';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import Dict = NodeJS.Dict;
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import {
+  PublicKey,
+  TransactionInstruction,
+  Keypair,
+  Connection,
+} from '@solana/web3.js';
 import { mangoDataApi, MangoDataApi } from './mango.api';
 
 export class MangoClobPerp {
@@ -60,7 +65,7 @@ export class MangoClobPerp {
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
-    this._client = MangoClient.connectDefault(this._chain.rpcUrl);
+    this._client = this.connectMangoClient();
     this.derivativeApi = mangoDataApi;
     this.mangoGroupPublicKey = new PublicKey(MangoConfig.defaultGroup);
     this.mangoGroup = {} as Group;
@@ -107,6 +112,33 @@ export class MangoClobPerp {
 
   public ready(): boolean {
     return this._ready;
+  }
+
+  /**
+   * Returns a MangoClient instance that is connected to the Solana network
+   * @note: This is a alternative way to connect to the MangoClient, because the connectDefaults will
+   *       spam requests to the Solana cluster causing rate limit errors.
+   */
+  private connectMangoClient(): MangoClient {
+    const clientKeypair = new Keypair();
+    const options = AnchorProvider.defaultOptions();
+    const connection = new Connection(this._chain.rpcUrl, options);
+
+    const clientWallet = new Wallet(clientKeypair);
+    const clientProvider = new AnchorProvider(
+      connection,
+      clientWallet,
+      options
+    );
+
+    return MangoClient.connect(
+      clientProvider,
+      'mainnet-beta',
+      MANGO_V4_ID['mainnet-beta'],
+      {
+        idsSource: 'api',
+      }
+    );
   }
 
   /**
@@ -172,11 +204,25 @@ export class MangoClobPerp {
     });
 
     // @todo: Check if there is account space optimization possible with tokenCount
-    const newAccount = await this._client.createAndFetchMangoAccount(
+    const newAccountSignature = await this._client.createMangoAccount(
       this.mangoGroup,
       accountNumber,
       market, // @todo: use asset symbol instead of market name?
       2
+    );
+
+    // @note: This is a hacky way to wait for the new account to be created
+    const latestBlockHash = await this._client.connection.getLatestBlockhash();
+
+    await this._client.connection.confirmTransaction({
+      blockhash: latestBlockHash.blockhash,
+      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      signature: newAccountSignature.signature,
+    });
+
+    const newAccount = await this._client.getMangoAccount(
+      this.mangoGroup.publicKey,
+      false
     );
 
     if (newAccount === undefined)
@@ -204,13 +250,22 @@ export class MangoClobPerp {
 
   public async orderBook(
     req: PerpClobOrderbookRequest
-  ): Promise<Orderbook<BookSide>> {
+  ): Promise<Orderbook<any>> {
     const resp = await this.markets(req);
     const market = resp.markets[req.market];
-    const [buys, sells] = await Promise.all([
-      market.loadBids(this._client),
-      market.loadAsks(this._client),
-    ]);
+
+    // @note: use getL2Ui to get the correct price levels
+    const buys = (await market.loadBids(this._client)).getL2Ui(10);
+    console.log(
+      '🪧 -> file: mango.perp.ts:262 -> MangoClobPerp -> buys:',
+      buys
+    );
+    const sells = (await market.loadAsks(this._client)).getL2Ui(10);
+    console.log(
+      '🪧 -> file: mango.perp.ts:264 -> MangoClobPerp -> sells:',
+      sells
+    );
+
     return {
       buys,
       sells,
@@ -503,9 +558,14 @@ export class MangoClobPerp {
       ...(await this.buildPostOrder(walletProvider, perpOrdersToCreate)),
     ];
 
-    const txHash = await this._client.sendAndConfirmTransaction(instructions, {
-      alts: this.mangoGroup.addressLookupTablesList,
-    });
-    return { txHash };
+    const txSignature = await this._client.sendAndConfirmTransaction(
+      instructions,
+      {
+        alts: this.mangoGroup.addressLookupTablesList,
+      }
+    );
+
+    // TODO: Make sure that gateway can parse this tx signature
+    return { txHash: txSignature.signature };
   }
 }
