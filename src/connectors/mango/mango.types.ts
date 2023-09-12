@@ -150,3 +150,11 @@ export type FundingInfo = {
   fundingRate: string;
   nextFundingTimestamp: number;
 };
+
+export type Market = {
+  name: string;
+  miniumOrderSize: number;
+  tickSize: number;
+  takerFee: number;
+  makerFee: number;
+};
