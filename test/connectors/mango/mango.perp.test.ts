@@ -6,7 +6,8 @@ import { Solana } from '../../../src/chains/solana/solana';
 let mango: MangoClobPerp;
 let solana: Solana;
 
-// const MARKET = 'BTC-PERP';
+const MARKET = 'BTC-PERP';
+const MARKET2 = 'ETH-PERP';
 
 const INVALID_REQUEST = {
   chain: 'unknown',
@@ -37,10 +38,6 @@ describe('GET /clob/perp/markets', () => {
       .expect('Content-Type', /json/)
       .expect(200)
       .expect((res) => {
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:40 -> .expect -> res.body:',
-          res.body
-        );
         expect(Object.keys(res.body.markets).length).toBeGreaterThan(0);
       });
   });
@@ -53,65 +50,80 @@ describe('GET /clob/perp/markets', () => {
   });
 });
 
-// describe('GET /clob/perp/orderBook', () => {
-//   it('should return 200 with proper request with ORDER_BOOK_1', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/orderBook`)
-//       .query({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango',
-//         market: MARKET,
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200);
-//   });
+describe('GET /clob/perp/orderBook', () => {
+  it(`should return 200 with proper request with orderbook from ${MARKET}`, async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/orderBook`)
+      .query({
+        chain: 'solana',
+        network: 'mainnet-beta',
+        connector: 'mango',
+        market: MARKET,
+      })
+      .set('Accept', 'application/json')
+      .expect('Content-Type', /json/)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.buys.length).toBeGreaterThan(0);
+        expect(res.body.sells.length).toBeGreaterThan(0);
+      });
+  });
 
-//   it('should return 200 with proper request with ORDER_BOOK_2', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/orderBook`)
-//       .query({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango',
-//         market: MARKET,
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200);
-//   });
+  it(`should return 200 with proper request with orderbook from ${MARKET2}`, async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/orderBook`)
+      .query({
+        chain: 'solana',
+        network: 'mainnet-beta',
+        connector: 'mango',
+        market: MARKET2,
+      })
+      .set('Accept', 'application/json')
+      .expect('Content-Type', /json/)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.buys.length).toBeGreaterThan(0);
+        expect(res.body.sells.length).toBeGreaterThan(0);
+      });
+  });
 
-//   it('should return 404 when parameters are invalid', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/orderBook`)
-//       .query(INVALID_REQUEST)
-//       .expect(404);
-//   });
-// });
+  it('should return 404 when parameters are invalid', async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/orderBook`)
+      .query(INVALID_REQUEST)
+      .expect(404);
+  });
+});
 
-// describe('GET /clob/perp/ticker', () => {
-//   it('should return 200 with proper request', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/ticker`)
-//       .query({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango',
-//         market: MARKET,
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200);
-//   });
+describe('GET /clob/perp/ticker', () => {
+  it('should return 200 with proper request', async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/ticker`)
+      .query({
+        chain: 'solana',
+        network: 'mainnet-beta',
+        connector: 'mango',
+        market: MARKET,
+      })
+      .set('Accept', 'application/json')
+      .expect('Content-Type', /json/)
+      .expect(200)
+      .expect((res) => {
+        console.log(
+          '🪧 -> file: mango.perp.test.ts:116 -> .expect -> res.body:',
+          res.body
+        );
+        expect(Object.keys(res.body.markets).length).toBeGreaterThan(0);
+      });
+  });
 
-//   it('should return 404 when parameters are invalid', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/ticker`)
-//       .query(INVALID_REQUEST)
-//       .expect(404);
-//   });
-// });
+  it('should return 404 when parameters are invalid', async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/ticker`)
+      .query(INVALID_REQUEST)
+      .expect(404);
+  });
+});
 
 // describe('GET /clob/perps/orders', () => {
 //   it('should return 200 with proper request', async () => {

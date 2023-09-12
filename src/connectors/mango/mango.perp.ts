@@ -20,7 +20,10 @@ import {
   Orderbook,
   extractPerpOrderParams,
 } from '../../clob/clob.requests';
-import { NetworkSelectionRequest } from '../../services/common-interfaces';
+import {
+  NetworkSelectionRequest,
+  PriceLevel,
+} from '../../services/common-interfaces';
 import { MangoConfig } from './mango.config';
 import {
   MangoClient,
@@ -36,6 +39,7 @@ import {
   OneHourFundingRate,
   PerpMarketFills,
   PerpTradeActivity,
+  Market,
 } from './mango.types';
 import { translateOrderSide, translateOrderType } from './mango.utils';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
@@ -238,33 +242,69 @@ export class MangoClobPerp {
 
   public async markets(
     req: PerpClobMarketRequest
-  ): Promise<{ markets: PerpClobMarkets<PerpMarket> }> {
+  ): Promise<{ markets: PerpClobMarkets<Market> }> {
     if (req.market && req.market.split('-').length === 2) {
-      const resp: PerpClobMarkets = {};
+      const resp: PerpClobMarkets<Market> = {};
+      const market = this.parsedMarkets[req.market];
 
-      resp[req.market] = this.parsedMarkets[req.market];
+      resp[req.market] = {
+        name: market.name,
+        miniumOrderSize: market.minOrderSize,
+        tickSize: market.tickSize,
+        takerFee: market.takerFee.toNumber(),
+        makerFee: market.makerFee.toNumber(),
+      };
+
       return { markets: resp };
     }
-    return { markets: this.parsedMarkets };
+
+    const mappedMarkets = Object.keys(this.parsedMarkets).reduce(
+      (acc, marketName) => {
+        const market = this.parsedMarkets[marketName];
+        acc[marketName] = {
+          name: market.name,
+          miniumOrderSize: market.minOrderSize,
+          tickSize: market.tickSize,
+          takerFee: market.takerFee.toNumber(),
+          makerFee: market.makerFee.toNumber(),
+        };
+        return acc;
+      },
+      {} as PerpClobMarkets<Market>
+    );
+
+    return { markets: mappedMarkets };
   }
 
   public async orderBook(
     req: PerpClobOrderbookRequest
   ): Promise<Orderbook<any>> {
-    const resp = await this.markets(req);
-    const market = resp.markets[req.market];
+    const market = this.parsedMarkets[req.market];
 
     // @note: use getL2Ui to get the correct price levels
-    const buys = (await market.loadBids(this._client)).getL2Ui(10);
-    console.log(
-      '🪧 -> file: mango.perp.ts:262 -> MangoClobPerp -> buys:',
-      buys
-    );
-    const sells = (await market.loadAsks(this._client)).getL2Ui(10);
-    console.log(
-      '🪧 -> file: mango.perp.ts:264 -> MangoClobPerp -> sells:',
-      sells
-    );
+    const bids = (await market.loadBids(this._client)).getL2Ui(10);
+    const asks = (await market.loadAsks(this._client)).getL2Ui(10);
+
+    // @note: currently all timestamp are the same
+    const currentTime = Date.now();
+    const buys: PriceLevel[] = [];
+    const sells: PriceLevel[] = [];
+
+    bids.forEach((bid) => {
+      buys.push({
+        price: bid[0].toString(),
+        quantity: bid[1].toString(),
+        timestamp: currentTime,
+      });
+    });
+
+    asks.forEach((ask) => {
+      sells.push({
+        price: ask[0].toString(),
+        quantity: ask[1].toString(),
+        timestamp: currentTime,
+      });
+    });
 
     return {
       buys,
@@ -281,15 +321,15 @@ export class MangoClobPerp {
 
   public async ticker(
     req: PerpClobTickerRequest
-  ): Promise<{ markets: PerpClobMarkets }> {
-    return await this.markets(req);
+  ): Promise<{ markets: PerpClobMarkets<Market> }> {
+    const market = await this.markets(req);
+    return market;
   }
 
   public async lastTradePrice(
     req: PerpClobGetLastTradePriceRequest
   ): Promise<string | null> {
-    const resp = await this.markets(req);
-    const market = resp.markets[req.market];
+    const market = this.parsedMarkets[req.market];
     const fills = await this.loadFills(market);
     if (fills.fills.length > 0) this._lastTradePrice = fills.fills[0].price;
     return this._lastTradePrice.toString();
