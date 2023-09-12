@@ -15,10 +15,12 @@ import {
   PerpClobTickerRequest,
   PerpClobGetLastTradePriceRequest,
   PerpClobBatchUpdateRequest,
+  PerpClobFundingInfoRequest,
   ClobDeleteOrderRequestExtract,
   CreatePerpOrderParam,
   Orderbook,
   extractPerpOrderParams,
+  FundingInfo,
 } from '../../clob/clob.requests';
 import {
   NetworkSelectionRequest,
@@ -36,7 +38,6 @@ import {
 } from '@blockworks-foundation/mango-v4';
 import {
   FundingPayment,
-  OneHourFundingRate,
   PerpMarketFills,
   PerpTradeActivity,
   Market,
@@ -464,10 +465,63 @@ export class MangoClobPerp {
     };
   }
 
-  public async fundingInfo(): Promise<Array<OneHourFundingRate>> {
-    return await this.derivativeApi.fetchOneHourFundingRate(
+  public async fundingInfo(
+    req: PerpClobFundingInfoRequest
+  ): Promise<FundingInfo> {
+    // marketId: string;
+    // indexPrice: string;
+    // markPrice: string;
+    // fundingRate: string;
+    // nextFundingTimestamp: number;
+
+    // return await this.derivativeApi.fetchOneHourFundingRate(
+    //   this.mangoGroup.publicKey.toBase58()
+    // );
+    await this.mangoGroup.reloadPerpMarkets(this._client);
+    await this.mangoGroup.reloadPerpMarketOraclePrices(this._client);
+    const oraclePerpMarket = this.mangoGroup.getPerpMarketByName(req.market);
+    console.log(
+      '🪧 -> file: mango.perp.ts:483 -> MangoClobPerp -> marketInfo:',
+      oraclePerpMarket
+    );
+    const marketId = req.market;
+    // const ai = await this._client.connection.getAccountInfo(marketInfo.oracle);
+    // console.log('🪧 -> file: mango.perp.ts:491 -> MangoClobPerp -> ai:', ai);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    // const oraclePriceData = parsePriceData(ai!.data);
+    // const indexPrice = oraclePriceData.previousPrice.toString();
+    const indexPrice = oraclePerpMarket.price.toString();
+    const markPrice = oraclePerpMarket.stablePriceModel.stablePrice.toString();
+
+    // @note: This method take 15s to load which is VERY SLOW, find way to replace it
+    //        probably find it in the oraclePerpMarket object.
+    const fundingRates = await this.derivativeApi.fetchOneHourFundingRate(
       this.mangoGroup.publicKey.toBase58()
     );
+    console.log(
+      '🪧 -> file: mango.perp.ts:489 -> MangoClobPerp -> fundingRate:',
+      fundingRates
+    );
+    const returnFundingRate = fundingRates.find(
+      (rate) => rate.name === req.market
+    );
+    console.log(
+      '🪧 -> file: mango.perp.ts:507 -> MangoClobPerp -> returnFundingRate:',
+      returnFundingRate
+    );
+
+    // return current timestamp + 1 hour into future
+    const nextFundingTimestamp = 1222;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const fundingRate = returnFundingRate!.funding_rate_hourly.toString();
+
+    return {
+      marketId,
+      indexPrice,
+      markPrice,
+      fundingRate,
+      nextFundingTimestamp: nextFundingTimestamp * 1e3,
+    };
   }
 
   public async fundingPayments(
