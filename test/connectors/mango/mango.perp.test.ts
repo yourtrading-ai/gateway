@@ -156,6 +156,34 @@ describe('GET /clob/perp/lastTradePrice', () => {
   });
 });
 
+describe('POST /clob/perp/funding/info', () => {
+  it('should return 200 with proper request', async () => {
+    await request(gatewayApp)
+      .post(`/clob/perp/funding/info`)
+      .send({
+        chain: 'solana',
+        network: 'mainnet-beta',
+        connector: 'mango',
+        market: MARKET,
+      })
+      .set('Accept', 'application/json')
+      .expect('Content-Type', /json/)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body).toBeDefined();
+      });
+  });
+
+  it('should return 404 when parameters are invalid', async () => {
+    await request(gatewayApp)
+      .post(`/clob/perp/funding/info`)
+      .send(INVALID_REQUEST)
+      .expect(404);
+  });
+});
+
+// ABOVE IS GOOD TEST CASES
+
 // describe('GET /clob/perps/orders', () => {
 //   it('should return 200 with proper request', async () => {
 //     // failed for now, finish when endpoint is ready.
@@ -219,36 +247,6 @@ describe('GET /clob/perp/lastTradePrice', () => {
 //       .expect(404);
 //   });
 // });
-
-describe('POST /clob/perp/funding/info', () => {
-  it('should return 200 with proper request', async () => {
-    await request(gatewayApp)
-      .post(`/clob/perp/funding/info`)
-      .send({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:238 -> .expect -> res.body:',
-          res.body
-        );
-        expect(res.body).toBeDefined();
-      });
-  });
-
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .post(`/clob/perp/funding/info`)
-      .send(INVALID_REQUEST)
-      .expect(404);
-  });
-});
 
 // describe('POST /clob/perp/funding/payments', () => {
 //   it('should return 200 with proper request', async () => {
