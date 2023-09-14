@@ -6,8 +6,8 @@ import { Solana } from '../../../src/chains/solana/solana';
 let mango: MangoClobPerp;
 let solana: Solana;
 
-const MARKET = 'BTC-PERP';
-// const MARKET2 = 'ETH-PERP';
+// const MARKET = 'BTC-PERP';
+const MARKET2 = 'ETH-PERP';
 
 const INVALID_REQUEST = {
   chain: 'unknown',
@@ -257,7 +257,7 @@ describe('POST /clob/perp/funding/payments', () => {
         network: 'mainnet-beta',
         connector: 'mango',
         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-        market: MARKET,
+        market: MARKET2,
       })
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
