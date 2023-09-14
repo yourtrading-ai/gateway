@@ -512,21 +512,12 @@ export class MangoClobPerp {
       req.address,
       req.market
     );
-    console.log(
-      '🪧 -> file: mango.perp.ts:505 -> MangoClobPerp -> mangoAccount:',
-      mangoAccount
-    );
-
-    const mangoAccountPK = mangoAccount.publicKey.toBase58();
-    console.log(
-      '🪧 -> file: mango.perp.ts:511 -> MangoClobPerp -> mangoAccountPK:',
-      mangoAccountPK
-    );
 
     // @note: take too long to fetch all funding payments
     const response = await this.derivativeApi.fetchFundingAccountHourly(
       mangoAccount.publicKey.toBase58()
     );
+
     const result: Record<string, Array<FundingPayment>> = {};
     Object.entries(response).forEach(([key, value]) => {
       result[key] = Object.entries(value).map(([key, value]) => {
@@ -537,6 +528,16 @@ export class MangoClobPerp {
         };
       });
     });
+
+    if (result[req.market] !== undefined) {
+      // Filter out empty amounts
+      result[req.market] = result[req.market].filter(
+        (payment) => payment.amount !== '0'
+      );
+    } else {
+      result[req.market] = [];
+    }
+
     return result[req.market];
   }
 
