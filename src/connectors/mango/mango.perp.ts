@@ -52,6 +52,7 @@ import {
   Connection,
 } from '@solana/web3.js';
 import { mangoDataApi, MangoDataApi } from './mango.api';
+import { max } from 'mathjs';
 
 export class MangoClobPerp {
   private static _instances: LRUCache<string, MangoClobPerp>;
@@ -70,7 +71,7 @@ export class MangoClobPerp {
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
-    this._client = this.connectMangoClient();
+    this._client = this.connectMangoClient(new Keypair());
     this.derivativeApi = mangoDataApi;
     this.mangoGroupPublicKey = new PublicKey(MangoConfig.defaultGroup);
     this.mangoGroup = {} as Group;
@@ -124,8 +125,8 @@ export class MangoClobPerp {
    * @note: This is a alternative way to connect to the MangoClient, because the connectDefaults will
    *       spam requests to the Solana cluster causing rate limit errors.
    */
-  private connectMangoClient(): MangoClient {
-    const clientKeypair = new Keypair();
+  private connectMangoClient(keypair: Keypair): MangoClient {
+    const clientKeypair = keypair;
     const options = AnchorProvider.defaultOptions();
     const connection = new Connection(this._chain.rpcUrl, options);
 
@@ -203,37 +204,45 @@ export class MangoClobPerp {
       }
     ) as MangoAccount[];
     const usedIndexes = accounts.map((account) => account.accountNum).sort();
-    const accountNumber = usedIndexes.find((value, index, array) => {
-      if (index === array.length - 1) return true;
-      return array[index - 1] + 1 !== value;
-    });
+    const accountNumber = usedIndexes.length > 0 ? max(usedIndexes) + 1 : 0;
+    const addressKeyPair = await this._chain.getKeypair(address);
+
+    if (addressKeyPair === undefined) {
+      throw Error(
+        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address}\nInvalid KeyPair?`
+      );
+    }
 
     // @todo: Check if there is account space optimization possible with tokenCount
-    const newAccountSignature = await this._client.createMangoAccount(
+    try {
+      const tempClient = this.connectMangoClient(addressKeyPair);
+      await tempClient.createMangoAccount(
+        this.mangoGroup,
+        accountNumber,
+        market,
+        2
+      );
+
+      // Wait for 300ms to make sure the transaction is confirmed
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    } catch (error) {
+      throw Error(
+        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup.publicKey.toString()} for wallet ${address}\nError: ${error}`
+      );
+    }
+
+    const updatedAccounts = await this._client.getMangoAccountsForOwner(
       this.mangoGroup,
-      accountNumber,
-      market, // @todo: use asset symbol instead of market name?
-      2
+      new PublicKey(address)
     );
 
-    // @note: This is a hacky way to wait for the new account to be created
-    const latestBlockHash = await this._client.connection.getLatestBlockhash();
-
-    await this._client.connection.confirmTransaction({
-      blockhash: latestBlockHash.blockhash,
-      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-      signature: newAccountSignature.signature,
-    });
-
-    const newAccount = await this._client.getMangoAccount(
-      this.mangoGroup.publicKey,
-      false
+    const newAccount = updatedAccounts.find(
+      (account) => account.accountNum === accountNumber
     );
 
     if (newAccount === undefined)
-      // @note
       throw Error(
-        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address} (${accountNumber})\nDo you have enough SOL?`
+        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address}\nDo you have enough SOL?`
       );
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -498,10 +507,23 @@ export class MangoClobPerp {
   public async fundingPayments(
     req: PerpClobFundingPaymentsRequest
   ): Promise<Array<FundingPayment>> {
+    console.log('🪧 -> file: mango.perp.ts:501 -> MangoClobPerp -> req:', req);
     const mangoAccount = await this.getOrCreateMangoAccount(
       req.address,
       req.market
     );
+    console.log(
+      '🪧 -> file: mango.perp.ts:505 -> MangoClobPerp -> mangoAccount:',
+      mangoAccount
+    );
+
+    const mangoAccountPK = mangoAccount.publicKey.toBase58();
+    console.log(
+      '🪧 -> file: mango.perp.ts:511 -> MangoClobPerp -> mangoAccountPK:',
+      mangoAccountPK
+    );
+
+    // @note: take too long to fetch all funding payments
     const response = await this.derivativeApi.fetchFundingAccountHourly(
       mangoAccount.publicKey.toBase58()
     );

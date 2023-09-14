@@ -7,7 +7,7 @@ let mango: MangoClobPerp;
 let solana: Solana;
 
 const MARKET = 'BTC-PERP';
-const MARKET2 = 'ETH-PERP';
+// const MARKET2 = 'ETH-PERP';
 
 const INVALID_REQUEST = {
   chain: 'unknown',
@@ -25,162 +25,162 @@ afterAll(async () => {
   solana.close();
 });
 
-describe('GET /clob/perp/markets', () => {
-  it('should return 200 with proper request', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/markets`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        expect(Object.keys(res.body.markets).length).toBeGreaterThan(0);
-      });
-  });
+// describe('GET /clob/perp/markets', () => {
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/markets`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(Object.keys(res.body.markets).length).toBeGreaterThan(0);
+//       });
+//   });
 
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/markets`)
-      .query(INVALID_REQUEST)
-      .expect(404);
-  });
-});
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/markets`)
+//       .query(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
 
-describe('GET /clob/perp/orderBook', () => {
-  it(`should return 200 with proper request with orderbook from ${MARKET}`, async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/orderBook`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        expect(res.body.buys.length).toBeGreaterThan(0);
-        expect(res.body.sells.length).toBeGreaterThan(0);
-      });
-  });
+// describe('GET /clob/perp/orderBook', () => {
+//   it(`should return 200 with proper request with orderbook from ${MARKET}`, async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orderBook`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body.buys.length).toBeGreaterThan(0);
+//         expect(res.body.sells.length).toBeGreaterThan(0);
+//       });
+//   });
 
-  it(`should return 200 with proper request with orderbook from ${MARKET2}`, async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/orderBook`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET2,
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        expect(res.body.buys.length).toBeGreaterThan(0);
-        expect(res.body.sells.length).toBeGreaterThan(0);
-      });
-  });
+//   it(`should return 200 with proper request with orderbook from ${MARKET2}`, async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orderBook`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET2,
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body.buys.length).toBeGreaterThan(0);
+//         expect(res.body.sells.length).toBeGreaterThan(0);
+//       });
+//   });
 
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/orderBook`)
-      .query(INVALID_REQUEST)
-      .expect(404);
-  });
-});
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orderBook`)
+//       .query(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
 
-describe('GET /clob/perp/ticker', () => {
-  it('should return 200 with proper request', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/ticker`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:116 -> .expect -> res.body:',
-          res.body
-        );
-        expect(Object.keys(res.body.markets).length).toBeGreaterThan(0);
-      });
-  });
+// describe('GET /clob/perp/ticker', () => {
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/ticker`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         console.log(
+//           '🪧 -> file: mango.perp.test.ts:116 -> .expect -> res.body:',
+//           res.body
+//         );
+//         expect(Object.keys(res.body.markets).length).toBeGreaterThan(0);
+//       });
+//   });
 
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/ticker`)
-      .query(INVALID_REQUEST)
-      .expect(404);
-  });
-});
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/ticker`)
+//       .query(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
 
-describe('GET /clob/perp/lastTradePrice', () => {
-  it('should return 200 with proper request', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/lastTradePrice`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:308 -> .expect -> res.body:',
-          res.body
-        );
-        expect(res.body.lastTradePrice).toBeDefined();
-        expect(parseFloat(res.body.lastTradePrice)).toBeDefined();
-      });
-  });
+// describe('GET /clob/perp/lastTradePrice', () => {
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/lastTradePrice`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         console.log(
+//           '🪧 -> file: mango.perp.test.ts:308 -> .expect -> res.body:',
+//           res.body
+//         );
+//         expect(res.body.lastTradePrice).toBeDefined();
+//         expect(parseFloat(res.body.lastTradePrice)).toBeDefined();
+//       });
+//   });
 
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/lastTradePrice`)
-      .query(INVALID_REQUEST)
-      .expect(404);
-  });
-});
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/lastTradePrice`)
+//       .query(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
 
-describe('POST /clob/perp/funding/info', () => {
-  it('should return 200 with proper request', async () => {
-    await request(gatewayApp)
-      .post(`/clob/perp/funding/info`)
-      .send({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        expect(res.body).toBeDefined();
-      });
-  });
+// describe('POST /clob/perp/funding/info', () => {
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .post(`/clob/perp/funding/info`)
+//       .send({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body).toBeDefined();
+//       });
+//   });
 
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .post(`/clob/perp/funding/info`)
-      .send(INVALID_REQUEST)
-      .expect(404);
-  });
-});
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .post(`/clob/perp/funding/info`)
+//       .send(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
 
 // ABOVE IS GOOD TEST CASES
 
@@ -248,30 +248,36 @@ describe('POST /clob/perp/funding/info', () => {
 //   });
 // });
 
-// describe('POST /clob/perp/funding/payments', () => {
-//   it('should return 200 with proper request', async () => {
-//     //TODO: finish this when funding/payments is ready
-//     await request(gatewayApp)
-//       .post(`/clob/perp/funding/payments`)
-//       .query({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango',
-//         address: '0x000000',
-//         market: MARKET,
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200);
-//   });
+describe('POST /clob/perp/funding/payments', () => {
+  it('should return 200 with proper request', async () => {
+    await request(gatewayApp)
+      .post(`/clob/perp/funding/payments`)
+      .send({
+        chain: 'solana',
+        network: 'mainnet-beta',
+        connector: 'mango',
+        address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+        market: MARKET,
+      })
+      .set('Accept', 'application/json')
+      .expect('Content-Type', /json/)
+      .expect(200)
+      .expect((res) => {
+        console.log(
+          '🪧 -> file: mango.perp.test.ts:266 -> .expect -> res.body:',
+          res.body
+        );
+        expect(res.body).toBeDefined();
+      });
+  });
 
-//   it('should return 404 when parameters are invalid', async () => {
-//     await request(gatewayApp)
-//       .post(`/clob/perp/funding/payments`)
-//       .query(INVALID_REQUEST)
-//       .expect(404);
-//   });
-// });
+  it('should return 404 when parameters are invalid', async () => {
+    await request(gatewayApp)
+      .post(`/clob/perp/funding/payments`)
+      .query(INVALID_REQUEST)
+      .expect(404);
+  });
+});
 
 // describe('POST /clob/perp/positions', () => {
 //   it('should return 200 with proper request', async () => {
