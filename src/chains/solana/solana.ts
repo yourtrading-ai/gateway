@@ -224,18 +224,9 @@ export class Solana implements Solanaish {
     if (!this._keypairs[address]) {
       const path = `${walletPath}/solana`;
 
-      const encryptedPrivateKey: any = JSON.parse(
-        await fse.readFile(`${path}/${address}.json`, 'utf8'),
-        (key, value) => {
-          switch (key) {
-            case 'ciphertext':
-            case 'salt':
-            case 'iv':
-              return bs58.decode(value);
-            default:
-              return value;
-          }
-        }
+      const encryptedPrivateKey: string = await fse.readFile(
+        `${path}/${address}.json`,
+        'utf8'
       );
 
       const passphrase = ConfigManagerCertPassphrase.readPassphrase();
@@ -244,8 +235,7 @@ export class Solana implements Solanaish {
       }
       const decrypted = await this.decrypt(encryptedPrivateKey, passphrase);
 
-      const enc = new TextEncoder();
-      this._keypairs[address] = Keypair.fromSecretKey(enc.encode(decrypted));
+      this._keypairs[address] = Keypair.fromSecretKey(bs58.decode(decrypted));
     }
 
     return this._keypairs[address];

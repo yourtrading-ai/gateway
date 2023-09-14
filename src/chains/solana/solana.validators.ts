@@ -9,7 +9,7 @@ import {
   validateToken,
 } from '../../services/validators';
 import bs58 from 'bs58';
-
+import { Keypair } from '@solana/web3.js';
 // invalid parameter errors
 
 export const invalidPrivateKeyError: string =
@@ -29,6 +29,20 @@ export const validatePublicKey: Validator = mkValidator(
   invalidPublicKeyError,
   (val) => typeof val === 'string' && isPublicKey(val)
 );
+
+export const validateSolPrivateKey = (secretKey: string): boolean => {
+  try {
+    // Decode the string into a Uint8Array
+    const secretKeyBytes = bs58.decode(secretKey);
+    // Create a Keypair object from the secret key bytes
+    Keypair.fromSecretKey(secretKeyBytes);
+    // If no error is thrown, the string is a valid Solana private key
+    return true;
+  } catch (error) {
+    // If an error is thrown, the string is not a valid Solana private key
+    return false;
+  }
+};
 
 // request types and corresponding validators
 
