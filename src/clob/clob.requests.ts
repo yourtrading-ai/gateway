@@ -198,6 +198,7 @@ export function extractPerpOrderParams(
       side: req.side,
       market: req.market,
       leverage: req.leverage,
+      clientOrderID: req.clientOrderID,
     });
   if ('cancelOrderParams' in req)
     perpOrdersToCancel = perpOrdersToCancel.concat(
@@ -208,6 +209,7 @@ export function extractPerpOrderParams(
       orderId: req.orderId,
       market: req.market,
     });
+
   return { perpOrdersToCreate, perpOrdersToCancel };
 }
 

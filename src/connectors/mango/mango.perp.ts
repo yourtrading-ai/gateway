@@ -35,6 +35,7 @@ import {
   PerpMarketIndex,
   PerpPosition,
   MANGO_V4_ID,
+  PerpOrder,
 } from '@blockworks-foundation/mango-v4';
 import {
   FundingPayment,
@@ -125,24 +126,29 @@ export class MangoClobPerp {
    * @note: This is a alternative way to connect to the MangoClient, because the connectDefaults will
    *       spam requests to the Solana cluster causing rate limit errors.
    */
-  private connectMangoClient(keypair: Keypair): MangoClient {
+  private connectMangoClient(
+    keypair: Keypair,
+    isAPI: boolean = true
+  ): MangoClient {
     const clientKeypair = keypair;
     const options = AnchorProvider.defaultOptions();
     const connection = new Connection(this._chain.rpcUrl, options);
 
     const clientWallet = new Wallet(clientKeypair);
-    const clientProvider = new AnchorProvider(
-      connection,
-      clientWallet,
-      options
-    );
+    const clientProvider = new AnchorProvider(connection, clientWallet, {
+      ...options,
+      commitment: 'confirmed',
+      preflightCommitment: 'confirmed',
+    });
+
+    const idsSource = isAPI ? 'api' : 'get-program-accounts';
 
     return MangoClient.connect(
       clientProvider,
       'mainnet-beta',
       MANGO_V4_ID['mainnet-beta'],
       {
-        idsSource: 'api',
+        idsSource,
       }
     );
   }
@@ -152,12 +158,9 @@ export class MangoClobPerp {
    */
   private async getProvider(address: string): Promise<AnchorProvider> {
     const wallet = new Wallet(await this._chain.getKeypair(address));
-    return new AnchorProvider(this._chain.connection, wallet, {
-      commitment: 'confirmed',
-      maxRetries: 3,
-      preflightCommitment: 'confirmed',
-      skipPreflight: false,
-    });
+    const options = AnchorProvider.defaultOptions();
+
+    return new AnchorProvider(this._chain.connection, wallet, options);
   }
 
   private getExistingMangoAccount(
@@ -379,43 +382,24 @@ export class MangoClobPerp {
     }
   }
 
-  public async orders(
-    req: PerpClobGetOrderRequest
-  ): Promise<Array<PerpTradeActivity>> {
-    // @todo: currently returns the same as trades, is it a problem tho?
+  public async orders(req: PerpClobGetOrderRequest): Promise<Array<PerpOrder>> {
     const mangoAccount = await this.getOrCreateMangoAccount(
       req.address,
       req.market
     );
-    const accountAddress = mangoAccount.publicKey.toBase58();
-    let targetOrder = undefined;
-    let orders = await this.derivativeApi.fetchPerpTradeHistory(accountAddress);
 
-    if (req.limit) {
-      if (req.limit > orders.length && orders.length === 10000) {
-        // @note: paginate over multiple requests
-        const allOrders = orders;
-        let page = 1;
-        while (orders.length === 10000 && allOrders.length < req.limit) {
-          orders = await this.derivativeApi.fetchPerpTradeHistory(
-            mangoAccount.publicKey.toBase58(),
-            page
-          );
-          allOrders.push(...orders);
-          page++;
-        }
-        orders = allOrders;
-      }
-      orders.slice(0, req.limit);
-    }
+    let targetOrder = undefined;
+
+    const orders = await mangoAccount.loadPerpOpenOrdersForMarket(
+      this._client,
+      this.mangoGroup,
+      this.parsedMarkets[req.market].perpMarketIndex,
+      true
+    );
 
     if (req.orderId !== undefined) {
       for (const order of orders) {
-        if (
-          order.taker_client_order_id === req.orderId ||
-          order.taker_order_id === req.orderId ||
-          order.maker_order_id === req.orderId
-        ) {
+        if (order.orderId.toString() === req.orderId) {
           targetOrder = order;
           break;
         }
@@ -507,7 +491,6 @@ export class MangoClobPerp {
   public async fundingPayments(
     req: PerpClobFundingPaymentsRequest
   ): Promise<Array<FundingPayment>> {
-    console.log('🪧 -> file: mango.perp.ts:501 -> MangoClobPerp -> req:', req);
     const mangoAccount = await this.getOrCreateMangoAccount(
       req.address,
       req.market
@@ -579,6 +562,7 @@ export class MangoClobPerp {
   }
 
   private async buildPostOrder(
+    client: MangoClient,
     provider: AnchorProvider,
     orders: CreatePerpOrderParam[]
   ): Promise<TransactionInstruction[]> {
@@ -590,7 +574,7 @@ export class MangoClobPerp {
       );
       const market = this.parsedMarkets[order.market];
       perpOrdersToCreate.push(
-        this._client.perpPlaceOrderV2Ix(
+        client.perpPlaceOrderV2Ix(
           this.mangoGroup,
           mangoAccount,
           market.perpMarketIndex,
@@ -598,7 +582,7 @@ export class MangoClobPerp {
           Number(order.price),
           Number(order.amount),
           undefined,
-          order.clientOrderID,
+          Number(order.clientOrderID),
           translateOrderType(order.orderType)
         )
       );
@@ -607,6 +591,7 @@ export class MangoClobPerp {
   }
 
   private async buildDeleteOrder(
+    client: MangoClient,
     provider: AnchorProvider,
     orders: ClobDeleteOrderRequestExtract[]
   ): Promise<TransactionInstruction[]> {
@@ -618,11 +603,11 @@ export class MangoClobPerp {
       );
       const market = this.parsedMarkets[order.market];
       perpOrdersToCancel.push(
-        this._client.perpCancelOrderIx(
+        client.perpCancelOrderIx(
           this.mangoGroup,
           mangoAccount,
           market.perpMarketIndex,
-          new BN(order.orderId)
+          new BN(order.orderId, 'hex')
         )
       );
     }
@@ -637,16 +622,36 @@ export class MangoClobPerp {
   ): Promise<{ txHash: string }> {
     // TODO: Find out how much Compute Units each instruction type uses and batch them in one or multiple transactions
     // TODO: Transfer funds to MangoAccount if necessary
+    // console.log('orderUpdate', req);
     const walletProvider = await this.getProvider(req.address);
+    const addressKeyPair = await this._chain.getKeypair(req.address);
+    const tempClient = this.connectMangoClient(addressKeyPair);
     const { perpOrdersToCreate, perpOrdersToCancel } =
       extractPerpOrderParams(req);
 
+    // console.log(
+    //   '🪧 -> file: mango.perp.ts:625 -> MangoClobPerp -> perpOrdersToCancel:',
+    //   perpOrdersToCancel
+    // );
+    // console.log(
+    //   '🪧 -> file: mango.perp.ts:625 -> MangoClobPerp -> perpOrdersToCreate:',
+    //   perpOrdersToCreate
+    // );
+
     const instructions = [
-      ...(await this.buildDeleteOrder(walletProvider, perpOrdersToCancel)),
-      ...(await this.buildPostOrder(walletProvider, perpOrdersToCreate)),
+      ...(await this.buildDeleteOrder(
+        tempClient,
+        walletProvider,
+        perpOrdersToCancel
+      )),
+      ...(await this.buildPostOrder(
+        tempClient,
+        walletProvider,
+        perpOrdersToCreate
+      )),
     ];
 
-    const txSignature = await this._client.sendAndConfirmTransaction(
+    const txSignature = await tempClient.sendAndConfirmTransaction(
       instructions,
       {
         alts: this.mangoGroup.addressLookupTablesList,
