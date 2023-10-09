@@ -1,7 +1,7 @@
 import { OrderType, Side } from '../../amm/amm.requests';
 import { PerpOrderSide, PerpOrderType } from '@blockworks-foundation/mango-v4';
 
-export async function translateOrderSide(side: Side) {
+export function translateOrderSide(side: Side) {
   switch (side) {
     case 'BUY':
       return PerpOrderSide.bid;
@@ -12,7 +12,7 @@ export async function translateOrderSide(side: Side) {
   }
 }
 
-export async function translateOrderType(type: OrderType) {
+export function translateOrderType(type: OrderType) {
   switch (type) {
     case 'LIMIT':
       return PerpOrderType.limit;
