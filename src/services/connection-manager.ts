@@ -247,7 +247,7 @@ export async function getConnector<T>(
     connectorInstance = QuipuSwap.getInstance(network);
   } else if (chain === 'ethereum' && connector === 'carbonamm') {
     connectorInstance = Carbonamm.getInstance(chain, network);
-  } else if (chain === 'solana' && connector === 'mango') {
+  } else if (chain === 'solana' && connector === 'mango_perpetual') {
     connectorInstance = MangoClobPerp.getInstance(chain, network);
   } else {
     throw new Error('unsupported chain or connector');

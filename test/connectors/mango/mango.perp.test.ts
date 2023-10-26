@@ -123,10 +123,6 @@ const patchgetKeypair = (privatekey: string) => {
 //       .expect('Content-Type', /json/)
 //       .expect(200)
 //       .expect((res) => {
-//         console.log(
-//           '🪧 -> file: mango.perp.test.ts:116 -> .expect -> res.body:',
-//           res.body
-//         );
 //         expect(Object.keys(res.body.markets).length).toBeGreaterThan(0);
 //       });
 //   });
@@ -139,36 +135,36 @@ const patchgetKeypair = (privatekey: string) => {
 //   });
 // });
 
-// describe('GET /clob/perp/lastTradePrice', () => {
-//   it('should return 200 with proper request', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/lastTradePrice`)
-//       .query({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango',
-//         market: MARKET,
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200)
-//       .expect((res) => {
-//         console.log(
-//           '🪧 -> file: mango.perp.test.ts:308 -> .expect -> res.body:',
-//           res.body
-//         );
-//         expect(res.body.lastTradePrice).toBeDefined();
-//         expect(parseFloat(res.body.lastTradePrice)).toBeDefined();
-//       });
-//   });
+describe('GET /clob/perp/lastTradePrice', () => {
+  it('should return 200 with proper request', async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/lastTradePrice`)
+      .query({
+        chain: 'solana',
+        network: 'mainnet-beta',
+        connector: 'mango_perpetual',
+        market: MARKET,
+      })
+      .set('Accept', 'application/json')
+      .expect('Content-Type', /json/)
+      .expect(200)
+      .expect((res) => {
+        console.log(
+          '🪧 -> file: mango.perp.test.ts:153 -> .expect -> lastTradePrice:',
+          res.body.lastTradePrice
+        );
+        expect(res.body.lastTradePrice).toBeDefined();
+        expect(parseFloat(res.body.lastTradePrice)).toBeDefined();
+      });
+  });
 
-//   it('should return 404 when parameters are invalid', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/lastTradePrice`)
-//       .query(INVALID_REQUEST)
-//       .expect(404);
-//   });
-// });
+  it('should return 404 when parameters are invalid', async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/lastTradePrice`)
+      .query(INVALID_REQUEST)
+      .expect(404);
+  });
+});
 
 // describe('POST /clob/perp/funding/info', () => {
 //   it('should return 200 with proper request', async () => {
@@ -212,10 +208,6 @@ const patchgetKeypair = (privatekey: string) => {
 //       .expect('Content-Type', /json/)
 //       .expect(200)
 //       .expect((res) => {
-//         console.log(
-//           '🪧 -> file: mango.perp.test.ts:266 -> .expect -> res.body:',
-//           res.body
-//         );
 //         expect(res.body).toBeDefined();
 //       });
 //   });
@@ -228,159 +220,200 @@ const patchgetKeypair = (privatekey: string) => {
 //   });
 // });
 
+// describe('POST /clob/perp/orders', () => {
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .post(`/clob/perp/orders`)
+//       .send({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//         side: 'BUY',
+//         price: '25800',
+//         amount: '0.0001',
+//         leverage: 1,
+//         clientOrderID: 123456,
+//         orderType: 'LIMIT',
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body).toBeDefined();
+//       });
+//   });
+
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .post(`/clob/perp/orders`)
+//       .send(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
+
+// describe('GET /clob/perps/orders', () => {
+//   it('should return 200 and all orders with proper request', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orders`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body).toBeDefined();
+//         expect(res.body.orders).toBeDefined();
+//       });
+//   });
+
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orders`)
+//       .query(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
+
+// describe('DELETE /clob/perp/orders', () => {
+//   let orderId: number;
+
+//   it('should return 200 and 1 order with proper request', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orders`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body).toBeDefined();
+//         expect(res.body.orders).toBeDefined();
+//         expect(res.body.orders.length).toEqual(1);
+//         orderId = res.body.orders[0].orderId;
+//       });
+//   });
+
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .delete(`/clob/perp/orders`)
+//       .send({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//         orderId: orderId,
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body).toBeDefined();
+//       });
+//   });
+
+//   it('should return 200 and empty order with proper request', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orders`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body).toBeDefined();
+//         expect(res.body.orders).toBeDefined();
+//         expect(res.body.orders.length).toEqual(0);
+//       });
+//   });
+
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .delete(`/clob/perp/orders`)
+//       .send(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
+
 // ABOVE IS GOOD TEST CASES
 
-describe('POST /clob/perp/orders', () => {
-  it('should return 200 with proper request', async () => {
-    await request(gatewayApp)
-      .post(`/clob/perp/orders`)
-      .send({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-        address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-        side: 'BUY',
-        price: '25800',
-        amount: '0.0001',
-        leverage: 1,
-        clientOrderID: 123456,
-        orderType: 'LIMIT',
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        expect(res.body).toBeDefined();
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:271 -> .expect -> body:',
-          res.body
-        );
-      });
-  });
+// describe('GET /clob/perps/orders', () => {
+//   it('should return 200 and all orders with proper request', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orders`)
+//       .query({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         market: MARKET,
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//         orderId: '4759278417761137954683314',
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         console.log(
+//           '🪧 -> file: mango.perp.test.ts:369 -> .expect -> res.body:',
+//           res.body
+//         );
+//         expect(res.body).toBeDefined();
+//         expect(res.body.orders).toBeDefined();
+//       });
+//   });
 
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .post(`/clob/perp/orders`)
-      .send(INVALID_REQUEST)
-      .expect(404);
-  });
-});
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .get(`/clob/perp/orders`)
+//       .query(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });
 
-describe('GET /clob/perps/orders', () => {
-  it('should return 200 and all orders with proper request', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/orders`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-        address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:116 -> .expect -> res.body:',
-          res.body
-        );
-        expect(res.body).toBeDefined();
-        expect(res.body.orders).toBeDefined();
-      });
-  });
+// describe('POST /clob/perp/order/trades', () => {
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .post(`/clob/perp/order/trades`)
+//       .send({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango',
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//         market: MARKET,
+//         orderId: '4759278417761137954683314',
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body).toBeDefined();
+//       });
+//   });
 
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/orders`)
-      .query(INVALID_REQUEST)
-      .expect(404);
-  });
-});
-
-describe('DELETE /clob/perp/orders', () => {
-  let orderId: number;
-
-  it('should return 200 and 1 order with proper request', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/orders`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-        address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:116 -> .expect -> res.body:',
-          res.body
-        );
-        expect(res.body).toBeDefined();
-        expect(res.body.orders).toBeDefined();
-        expect(res.body.orders.length).toEqual(1);
-        orderId = res.body.orders[0].orderId;
-      });
-  });
-
-  it('should return 200 with proper request', async () => {
-    await request(gatewayApp)
-      .delete(`/clob/perp/orders`)
-      .send({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-        address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-        orderId: orderId,
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        expect(res.body).toBeDefined();
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:271 -> .expect -> body:',
-          res.body
-        );
-      });
-  });
-
-  it('should return 200 and empty order with proper request', async () => {
-    await request(gatewayApp)
-      .get(`/clob/perp/orders`)
-      .query({
-        chain: 'solana',
-        network: 'mainnet-beta',
-        connector: 'mango',
-        market: MARKET,
-        address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-      })
-      .set('Accept', 'application/json')
-      .expect('Content-Type', /json/)
-      .expect(200)
-      .expect((res) => {
-        console.log(
-          '🪧 -> file: mango.perp.test.ts:116 -> .expect -> res.body:',
-          res.body
-        );
-        expect(res.body).toBeDefined();
-        expect(res.body.orders).toBeDefined();
-        expect(res.body.orders.length).toEqual(0);
-      });
-  });
-
-  it('should return 404 when parameters are invalid', async () => {
-    await request(gatewayApp)
-      .delete(`/clob/perp/orders`)
-      .send(INVALID_REQUEST)
-      .expect(404);
-  });
-});
+// it('should return 404 when parameters are invalid', async () => {
+//   await request(gatewayApp)
+//     .post(`/clob/perp/order/trades`)
+//     .query(INVALID_REQUEST)
+//     .expect(404);
+// });
+// });
 
 // describe('GET /clob/perp/estimateGas', () => {
 //   it('should return 200 with proper request', async () => {
@@ -424,32 +457,6 @@ describe('DELETE /clob/perp/orders', () => {
 //   it('should return 404 when parameters are invalid', async () => {
 //     await request(gatewayApp)
 //       .post(`/clob/perp/positions`)
-//       .query(INVALID_REQUEST)
-//       .expect(404);
-//   });
-// });
-
-// describe('POST /clob/perp/order/trades', () => {
-//   it('should return 200 with proper request', async () => {
-//     //TODO: finish this when order/trades is ready
-//     await request(gatewayApp)
-//       .post(`/clob/perp/order/trades`)
-//       .query({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango',
-//         address: '0x000000',
-//         market: MARKET,
-//         orderId: '123',
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200);
-//   });
-
-//   it('should return 404 when parameters are invalid', async () => {
-//     await request(gatewayApp)
-//       .post(`/clob/perp/order/trades`)
 //       .query(INVALID_REQUEST)
 //       .expect(404);
 //   });
