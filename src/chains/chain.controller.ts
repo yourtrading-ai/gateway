@@ -102,6 +102,7 @@ export async function balances(
   req: BalanceRequest
 ): Promise<BalanceResponse | string> {
   const initTime = Date.now();
+  console.log('🪧 -> file: chain.controller.ts:108 -> req:', req);
   const balances = await chain.controller.balances(chain, req);
 
   return {

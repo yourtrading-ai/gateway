@@ -95,7 +95,6 @@ export namespace ChainRoutes {
           req.body.chain,
           req.body.network
         );
-
         res.status(200).json(await balances(chain, req.body));
       }
     )

@@ -20,33 +20,6 @@ import {
   SolanaTokenResponse,
 } from './solana.requests';
 
-// TODO: make the response conform to HB standard
-export async function balances(
-  solanaish: Solanaish,
-  req: SolanaBalanceRequest
-): Promise<SolanaBalanceResponse | string> {
-  const initTime = Date.now();
-  let wallet: Keypair;
-  try {
-    wallet = await solanaish.getKeypair(req.address);
-  } catch (err) {
-    throw new HttpException(
-      500,
-      LOAD_WALLET_ERROR_MESSAGE + err,
-      LOAD_WALLET_ERROR_CODE
-    );
-  }
-  const balances = await solanaish.getBalances(wallet);
-  const filteredBalances = toSolanaBalances(balances, req.tokenSymbols);
-
-  return {
-    network: solanaish.network,
-    timestamp: initTime,
-    latency: latency(initTime, Date.now()),
-    balances: filteredBalances,
-  };
-}
-
 const toSolanaBalances = (
   balances: Record<string, TokenValue>,
   tokenSymbols: string[]
@@ -69,103 +42,137 @@ const toSolanaBalances = (
   return solanaBalances;
 };
 
-// TODO: make the response conform to HB standard
-export async function poll(
-  solanaish: Solanaish,
-  req: SolanaPollRequest
-): Promise<SolanaPollResponse> {
-  const initTime = Date.now();
-  const currentBlock = await solanaish.getCurrentBlockNumber();
-  const txData = getNotNullOrThrowError<TransactionResponse>(
-    await solanaish.getTransaction(req.txHash)
-  );
-  const txStatus = await solanaish.getTransactionStatusCode(txData);
+export class SolanaController {
+  static async balances(
+    solanaish: Solanaish,
+    req: SolanaBalanceRequest
+  ): Promise<SolanaBalanceResponse | string> {
+    const initTime = Date.now();
+    let wallet: Keypair;
+    try {
+      wallet = await solanaish.getKeypair(req.address);
+    } catch (err) {
+      throw new HttpException(
+        500,
+        LOAD_WALLET_ERROR_MESSAGE + err,
+        LOAD_WALLET_ERROR_CODE
+      );
+    }
 
-  return {
-    network: solanaish.network,
-    timestamp: initTime,
-    currentBlock: currentBlock,
-    txHash: req.txHash,
-    txStatus: txStatus,
-    txBlock: txData.slot,
-    txData: txData as unknown as CustomTransactionResponse | null,
-    txReceipt: null, // TODO check if we get a receipt here
-  };
-}
+    const balances = await solanaish.getBalances(wallet);
 
-// TODO: make the response conform to HB standard
-export async function getTokens(
-  solanaish: Solanaish,
-  req: SolanaTokenRequest
-): Promise<SolanaTokenResponse> {
-  const initTime = Date.now();
-  const tokenInfo = solanaish.getTokenForSymbol(req.token);
-  if (!tokenInfo) {
-    throw new HttpException(
-      500,
-      TOKEN_NOT_SUPPORTED_ERROR_MESSAGE + req.token,
-      TOKEN_NOT_SUPPORTED_ERROR_CODE
+    const filteredBalances = toSolanaBalances(balances, req.tokenSymbols);
+    console.log(
+      '🪧 -> file: solana.controllers.ts:65 -> SolanaController -> filteredBalances:',
+      filteredBalances
     );
+
+    return {
+      network: solanaish.network,
+      timestamp: initTime,
+      latency: latency(initTime, Date.now()),
+      balances: filteredBalances,
+    };
   }
 
-  const walletAddress = new PublicKey(req.address);
-  const mintAddress = new PublicKey(tokenInfo.address);
-  const account = await solanaish.getTokenAccount(walletAddress, mintAddress);
-
-  let amount;
-  try {
-    amount = tokenValueToString(
-      await solanaish.getSplBalance(walletAddress, mintAddress)
+  // TODO: make the response conform to HB standard
+  static async poll(
+    solanaish: Solanaish,
+    req: SolanaPollRequest
+  ): Promise<SolanaPollResponse> {
+    const initTime = Date.now();
+    const currentBlock = await solanaish.getCurrentBlockNumber();
+    const txData = getNotNullOrThrowError<TransactionResponse>(
+      await solanaish.getTransaction(req.txHash)
     );
-  } catch (err) {
-    amount = null;
+    const txStatus = await solanaish.getTransactionStatusCode(txData);
+
+    return {
+      network: solanaish.network,
+      timestamp: initTime,
+      currentBlock: currentBlock,
+      txHash: req.txHash,
+      txStatus: txStatus,
+      txBlock: txData.slot,
+      txData: txData as unknown as CustomTransactionResponse | null,
+      txReceipt: null, // TODO check if we get a receipt here
+    };
   }
 
-  return {
-    network: solanaish.network,
-    timestamp: initTime,
-    token: req.token,
-    mintAddress: mintAddress.toBase58(),
-    accountAddress: account?.pubkey.toBase58(),
-    amount,
-  };
-}
+  // TODO: make the response conform to HB standard
+  static async getTokens(
+    solanaish: Solanaish,
+    req: SolanaTokenRequest
+  ): Promise<SolanaTokenResponse> {
+    const initTime = Date.now();
+    const tokenInfo = solanaish.getTokenForSymbol(req.token);
+    if (!tokenInfo) {
+      throw new HttpException(
+        500,
+        TOKEN_NOT_SUPPORTED_ERROR_MESSAGE + req.token,
+        TOKEN_NOT_SUPPORTED_ERROR_CODE
+      );
+    }
 
-// TODO: Review this function as it is not needed now
-export async function getOrCreateTokenAccount(
-  solanaish: Solanaish,
-  req: SolanaTokenRequest
-): Promise<SolanaTokenResponse> {
-  const initTime = Date.now();
-  const tokenInfo = solanaish.getTokenForSymbol(req.token);
-  if (!tokenInfo) {
-    throw new HttpException(
-      500,
-      TOKEN_NOT_SUPPORTED_ERROR_MESSAGE + req.token,
-      TOKEN_NOT_SUPPORTED_ERROR_CODE
+    const walletAddress = new PublicKey(req.address);
+    const mintAddress = new PublicKey(tokenInfo.address);
+    const account = await solanaish.getTokenAccount(walletAddress, mintAddress);
+
+    let amount;
+    try {
+      amount = tokenValueToString(
+        await solanaish.getSplBalance(walletAddress, mintAddress)
+      );
+    } catch (err) {
+      amount = null;
+    }
+
+    return {
+      network: solanaish.network,
+      timestamp: initTime,
+      token: req.token,
+      mintAddress: mintAddress.toBase58(),
+      accountAddress: account?.pubkey.toBase58(),
+      amount,
+    };
+  }
+
+  // TODO: Review this function as it is not needed now
+  static async getOrCreateTokenAccount(
+    solanaish: Solanaish,
+    req: SolanaTokenRequest
+  ): Promise<SolanaTokenResponse> {
+    const initTime = Date.now();
+    const tokenInfo = solanaish.getTokenForSymbol(req.token);
+    if (!tokenInfo) {
+      throw new HttpException(
+        500,
+        TOKEN_NOT_SUPPORTED_ERROR_MESSAGE + req.token,
+        TOKEN_NOT_SUPPORTED_ERROR_CODE
+      );
+    }
+    const wallet = await solanaish.getKeypair(req.address);
+    const mintAddress = new PublicKey(tokenInfo.address);
+    const account = await solanaish.getOrCreateAssociatedTokenAccount(
+      wallet,
+      mintAddress
     );
-  }
-  const wallet = await solanaish.getKeypair(req.address);
-  const mintAddress = new PublicKey(tokenInfo.address);
-  const account = await solanaish.getOrCreateAssociatedTokenAccount(
-    wallet,
-    mintAddress
-  );
 
-  let amount;
-  try {
-    const a = await solanaish.getSplBalance(wallet.publicKey, mintAddress);
-    amount = tokenValueToString(a);
-  } catch (err) {
-    amount = null;
-  }
+    let amount;
+    try {
+      const a = await solanaish.getSplBalance(wallet.publicKey, mintAddress);
+      amount = tokenValueToString(a);
+    } catch (err) {
+      amount = null;
+    }
 
-  return {
-    network: solanaish.network,
-    timestamp: initTime,
-    token: req.token,
-    mintAddress: mintAddress.toBase58(),
-    accountAddress: account?.address.toBase58(),
-    amount,
-  };
+    return {
+      network: solanaish.network,
+      timestamp: initTime,
+      token: req.token,
+      mintAddress: mintAddress.toBase58(),
+      accountAddress: account?.address.toBase58(),
+      amount,
+    };
+  }
 }

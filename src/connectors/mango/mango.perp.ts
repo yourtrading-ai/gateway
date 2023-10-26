@@ -39,11 +39,15 @@ import {
 } from '@blockworks-foundation/mango-v4';
 import {
   FundingPayment,
-  PerpMarketFills,
+  // PerpMarketFills,
   PerpTradeActivity,
   Market,
 } from './mango.types';
-import { translateOrderSide, translateOrderType } from './mango.utils';
+import {
+  translateOrderSide,
+  translateOrderType,
+  randomInt,
+} from './mango.utils';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import Dict = NodeJS.Dict;
 import {
@@ -55,6 +59,21 @@ import {
 import { mangoDataApi, MangoDataApi } from './mango.api';
 import { max } from 'mathjs';
 
+type OrderIdentifier = {
+  clientOrderId: number;
+  expiryTimestamp: string;
+};
+
+type IdentifiedOrder = {
+  clientOrderId: number;
+  exchangeOrderId: string;
+};
+
+type IdentifiablePostOrdersIxs = {
+  instructions: TransactionInstruction[];
+  identifiers: OrderIdentifier[];
+};
+
 export class MangoClobPerp {
   private static _instances: LRUCache<string, MangoClobPerp>;
   private readonly _chain: Solana;
@@ -65,7 +84,7 @@ export class MangoClobPerp {
   public conf: MangoConfig.NetworkConfig;
 
   private _ready: boolean = false;
-  private _lastTradePrice: number = 0;
+  // private _lastTradePrice: number = 0;
   public parsedMarkets: PerpClobMarkets<PerpMarket> = {};
   // @note: Contains all MangoAccounts, grouped by owner address and base asset
   public mangoAccounts: Dict<Dict<MangoAccount>> = {};
@@ -325,12 +344,12 @@ export class MangoClobPerp {
     };
   }
 
-  private async loadFills(market: PerpMarket): Promise<PerpMarketFills> {
-    return {
-      marketName: market.name,
-      fills: await market.loadFills(this._client),
-    };
-  }
+  // private async loadFills(market: PerpMarket): Promise<PerpMarketFills> {
+  //   return {
+  //     marketName: market.name,
+  //     fills: await market.loadFills(this._client),
+  //   };
+  // }
 
   public async ticker(
     req: PerpClobTickerRequest
@@ -342,10 +361,15 @@ export class MangoClobPerp {
   public async lastTradePrice(
     req: PerpClobGetLastTradePriceRequest
   ): Promise<string | null> {
+    // TODO: fills return empty, get stable price as temp fix
+    await this.mangoGroup.reloadPerpMarkets(this._client);
     const market = this.parsedMarkets[req.market];
-    const fills = await this.loadFills(market);
-    if (fills.fills.length > 0) this._lastTradePrice = fills.fills[0].price;
-    return this._lastTradePrice.toString();
+    // const fills = await this.loadFills(market);
+
+    // if (fills.fills.length > 0) this._lastTradePrice = fills.fills[0].price;
+    // return this._lastTradePrice.toString();
+
+    return market.stablePriceModel.stablePrice.toString();
   }
 
   public async trades(
@@ -590,6 +614,47 @@ export class MangoClobPerp {
     return await Promise.all(perpOrdersToCreate);
   }
 
+  private async buildIdentifiablePostOrder(
+    client: MangoClient,
+    provider: AnchorProvider,
+    orders: CreatePerpOrderParam[]
+  ): Promise<IdentifiablePostOrdersIxs> {
+    const perpOrdersToCreate = [];
+    const identifiers: OrderIdentifier[] = [];
+    for (const order of orders) {
+      const mangoAccount = await this.getOrCreateMangoAccount(
+        provider.wallet.publicKey.toBase58(),
+        order.market
+      );
+      const market = this.parsedMarkets[order.market];
+      const identifier = Math.floor(Date.now() / 1000) + randomInt(3600, 7200);
+      perpOrdersToCreate.push(
+        client.perpPlaceOrderV2Ix(
+          this.mangoGroup,
+          mangoAccount,
+          market.perpMarketIndex,
+          translateOrderSide(order.side),
+          Number(order.price),
+          Number(order.amount),
+          undefined,
+          Number(order.clientOrderID),
+          translateOrderType(order.orderType),
+          undefined,
+          undefined,
+          identifier
+        )
+      );
+      identifiers.push({
+        clientOrderId: Number(order.clientOrderID),
+        expiryTimestamp: identifier.toString(),
+      });
+    }
+    return {
+      instructions: await Promise.all(perpOrdersToCreate),
+      identifiers,
+    };
+  }
+
   private async buildDeleteOrder(
     client: MangoClient,
     provider: AnchorProvider,
@@ -619,7 +684,10 @@ export class MangoClobPerp {
       | PerpClobDeleteOrderRequest
       | PerpClobPostOrderRequest
       | PerpClobBatchUpdateRequest
-  ): Promise<{ txHash: string }> {
+  ): Promise<{
+    txHash: string;
+    identifiedOrders: IdentifiedOrder[] | undefined;
+  }> {
     // TODO: Find out how much Compute Units each instruction type uses and batch them in one or multiple transactions
     // TODO: Transfer funds to MangoAccount if necessary
     // console.log('orderUpdate', req);
@@ -637,6 +705,50 @@ export class MangoClobPerp {
     //   '🪧 -> file: mango.perp.ts:625 -> MangoClobPerp -> perpOrdersToCreate:',
     //   perpOrdersToCreate
     // );
+
+    // TODO: Hacky way to identify an order
+    if (perpOrdersToCancel.length === 0 && perpOrdersToCreate.length >= 1) {
+      const identifiedOrders: IdentifiedOrder[] = [];
+      const payload = await this.buildIdentifiablePostOrder(
+        tempClient,
+        walletProvider,
+        perpOrdersToCreate
+      );
+
+      const txSignature = await tempClient.sendAndConfirmTransaction(
+        payload.instructions,
+        {
+          alts: this.mangoGroup.addressLookupTablesList,
+        }
+      );
+
+      const mangoAccount = await this.getOrCreateMangoAccount(
+        req.address,
+        perpOrdersToCreate[0].market
+      );
+
+      // TODO: this only works if there is only one order in the payload
+      const orders = await mangoAccount.loadPerpOpenOrdersForMarket(
+        this._client,
+        this.mangoGroup,
+        this.parsedMarkets[perpOrdersToCreate[0].market].perpMarketIndex,
+        true
+      );
+
+      // Check order in orders if expiryTimestamp is the same as the one in payload
+      for (const order of orders) {
+        for (const identifier of payload.identifiers) {
+          if (order.expiryTimestamp.toString() === identifier.expiryTimestamp) {
+            identifiedOrders.push({
+              clientOrderId: identifier.clientOrderId,
+              exchangeOrderId: order.orderId.toString(),
+            });
+          }
+        }
+      }
+
+      return { txHash: txSignature.signature, identifiedOrders };
+    }
 
     const instructions = [
       ...(await this.buildDeleteOrder(
@@ -659,6 +771,6 @@ export class MangoClobPerp {
     );
 
     // TODO: Make sure that gateway can parse this tx signature
-    return { txHash: txSignature.signature };
+    return { txHash: txSignature.signature, identifiedOrders: undefined };
   }
 }

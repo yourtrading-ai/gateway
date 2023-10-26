@@ -33,6 +33,7 @@ import { TransactionResponseStatusCode } from './solana.requests';
 import { promises as fs } from 'fs';
 import axios from 'axios';
 import crypto from 'crypto';
+import { SolanaController } from './solana.controllers';
 
 export class Solana implements Solanaish {
   public rpcUrl;
@@ -57,6 +58,7 @@ export class Solana implements Solanaish {
   // there are async values set in the constructor
   private _ready: boolean = false;
   private initializing: boolean = false;
+  public controller: typeof SolanaController;
 
   constructor(network: string) {
     this._network = network;
@@ -79,6 +81,8 @@ export class Solana implements Solanaish {
 
     this.onDebugMessage('all', this.requestCounter.bind(this));
     setInterval(this.metricLogger.bind(this), this.metricsLogInterval);
+
+    this.controller = SolanaController;
   }
 
   public get gasPrice(): number {
@@ -318,6 +322,11 @@ export class Solana implements Solanaish {
     if (balances['SOL'] && balances['SOL'].value) {
       allSolBalance = allSolBalance.add(balances['SOL'].value);
       allSolDecimals = balances['SOL'].decimals;
+    } else {
+      balances['SOL'] = {
+        value: allSolBalance,
+        decimals: getNotNullOrThrowError<number>(allSolDecimals),
+      };
     }
 
     balances['ALL_SOL'] = {
