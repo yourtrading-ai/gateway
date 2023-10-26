@@ -30,6 +30,7 @@ import { MangoConfig } from './mango.config';
 import {
   Group,
   HealthType,
+  I80F48,
   MANGO_V4_ID,
   MangoAccount,
   MangoClient,
@@ -138,7 +139,7 @@ export class MangoClobPerp {
 
   /**
    * Returns a MangoClient instance that is connected to the Solana network
-   * @note: This is a alternative way to connect to the MangoClient, because the connectDefaults will
+   * @note: This is an alternative way to connect to the MangoClient, because the connectDefaults will
    *       spam requests to the Solana cluster causing rate limit errors.
    */
   private connectMangoClient(
@@ -234,15 +235,13 @@ export class MangoClobPerp {
     // @todo: Check if there is account space optimization possible with tokenCount
     try {
       const tempClient = this.connectMangoClient(addressKeyPair);
+      console.log('Creating account: ', accountNumber, market);
       await tempClient.createMangoAccount(
         this.mangoGroup,
         accountNumber,
         market,
         2
       );
-
-      // Wait for 300ms to make sure the transaction is confirmed
-      await new Promise((resolve) => setTimeout(resolve, 300));
     } catch (error) {
       throw Error(
         `MangoAccount creation failure: ${market} - in group ${this.mangoGroup.publicKey.toString()} for wallet ${address}\nError: ${error}`
@@ -350,8 +349,7 @@ export class MangoClobPerp {
   public async ticker(
     req: PerpClobTickerRequest
   ): Promise<{ markets: PerpClobMarkets<Market> }> {
-    const market = await this.markets(req);
-    return market;
+    return await this.markets(req);
   }
 
   public async lastTradePrice(
@@ -437,31 +435,65 @@ export class MangoClobPerp {
     price: string,
     quantity: string,
     leverage: number
-  ): BN {
-    // @todo: update with the asset/liability weight multipliers
-    // margin = (price * quantity) / leverage
-    const priceBig = new BN(price);
-    const quantityBig = new BN(quantity);
+  ): I80F48 {
+    /**
+     * Returns the margin required for a PerpOrder in USDC
+     */
+    const priceBig = I80F48.fromString(price);
+    const quantityBig = I80F48.fromString(quantity);
+    const leverageBig = I80F48.fromString(leverage.toString());
 
-    return priceBig.mul(quantityBig).divn(leverage);
+    return priceBig.mul(quantityBig).div(leverageBig);
   }
 
-  public async postOrder(
-    req: PerpClobPostOrderRequest
-  ): Promise<{ txHash: string }> {
-    return await this.orderUpdate(req);
+  public getFreeCollateral(mangoAccount: MangoAccount) {
+    /**
+     * Returns the free collateral of a MangoAccount in USDC
+     */
+    const decimals = <string>(
+      this.mangoGroup.banksMapByName.get('USDC')?.[0].mintDecimals.toString()
+    );
+    const decimalsBig = I80F48.fromString('1e' + decimals);
+    return mangoAccount
+      .getHealth(this.mangoGroup, HealthType.init)
+      .div(decimalsBig);
   }
 
-  public async deleteOrder(
-    req: PerpClobDeleteOrderRequest
-  ): Promise<{ txHash: string }> {
-    return this.orderUpdate(req);
+  private mapClientOrderIDs(result: {
+    txHash: string;
+    identifiedOrders: IdentifiedOrder[] | undefined;
+  }) {
+    return {
+      txHash: result.txHash,
+      clientOrderID:
+        result.identifiedOrders?.map((identifiedOrder) =>
+          identifiedOrder.clientOrderId.toString()
+        ) ?? [],
+    };
   }
 
-  public async batchPerpOrders(
-    req: PerpClobBatchUpdateRequest
-  ): Promise<{ txHash: string }> {
-    return this.orderUpdate(req);
+  public async postOrder(req: PerpClobPostOrderRequest): Promise<{
+    txHash: string;
+    clientOrderID?: string | string[];
+  }> {
+    const result = await this.orderUpdate(req);
+    return this.mapClientOrderIDs(result);
+  }
+
+  public async deleteOrder(req: PerpClobDeleteOrderRequest): Promise<{
+    txHash: string;
+    clientOrderID?: string | string[];
+  }> {
+    const result = await this.orderUpdate(req);
+    return this.mapClientOrderIDs(result);
+  }
+
+  public async batchPerpOrders(req: PerpClobBatchUpdateRequest): Promise<{
+    txHash: string;
+    clientOrderID?: string | string[];
+  }> {
+    const result = await this.orderUpdate(req);
+    return this.mapClientOrderIDs(result);
   }
 
   public estimateGas(_req: NetworkSelectionRequest): {
@@ -488,15 +520,15 @@ export class MangoClobPerp {
     const indexPrice = oraclePerpMarket.price.toString();
     const markPrice = oraclePerpMarket.stablePriceModel.stablePrice.toString();
 
-    // Get daily instantanious funding rate
+    // Get daily instantaneous funding rate
     const fr = oraclePerpMarket.getInstantaneousFundingRateUi(
       await oraclePerpMarket.loadBids(this._client),
       await oraclePerpMarket.loadAsks(this._client)
     );
 
-    // @note: Funding is continously applied on every interaction to a perp position.
+    // @note: Funding is continuously applied on every interaction to a perp position.
     //        We should handle this differently from deterministic funding rate (e.g. every 8 hours)
-    //        For now, let make it like a periodly thing (every 1 hour), and we can change it later
+    //        For now, let make it like a periodic thing (every 1 hour), and we can change it later
     const nextFundingTimestamp = Date.now() + 60 * 60 * 1000;
 
     return {
@@ -556,12 +588,12 @@ export class MangoClobPerp {
   }
 
   private async fetchPositions(
-    marketIndexs: PerpMarketIndex[],
+    marketIndexes: PerpMarketIndex[],
     ownerPk: string
   ) {
     const positions: PerpPosition[] = [];
 
-    marketIndexs.map((marketIndex) => {
+    marketIndexes.map((marketIndex) => {
       const mangoAccount = this.getExistingMangoAccount(
         ownerPk,
         marketIndex.toString()
@@ -571,11 +603,11 @@ export class MangoClobPerp {
         return;
       }
 
-      const filterdPerpPositions = mangoAccount
+      const filteredPerpPositions = mangoAccount
         .perpActive()
         .filter((pp) => pp.marketIndex === marketIndex);
 
-      positions.concat(filterdPerpPositions);
+      positions.concat(filteredPerpPositions);
     });
 
     return positions;
@@ -617,17 +649,16 @@ export class MangoClobPerp {
   ): Promise<IdentifiablePostOrdersIxs> {
     const perpOrdersToCreate = [];
     const identifiers: OrderIdentifier[] = [];
-    const missingCollateral = new Map<string, BN>();
+    const missingCollateral = new Map<string, I80F48>();
     for (const order of orders) {
       const mangoAccount = await this.getOrCreateMangoAccount(
         provider.wallet.publicKey.toBase58(),
         order.market
       );
       const market = this.parsedMarkets[order.market];
-      const identifier = Math.floor(Date.now() / 1000) + randomInt(3600, 7200);
-      const freeCollateral = mangoAccount
-        .getHealth(this.mangoGroup, HealthType.init)
-        .toTwos();
+      const identifier =
+        Math.floor(Date.now() / 1000) + randomInt(3600 * 1000, 7200 * 1000);
+      const freeCollateral = this.getFreeCollateral(mangoAccount);
       const requiredMargin = MangoClobPerp.calculateMargin(
         order.price,
         order.amount,
@@ -642,18 +673,7 @@ export class MangoClobPerp {
         } else {
           missingCollateral.set(
             order.market,
-            <BN>missingCollateral.get(order.market)?.add(requiredMargin)
-          );
-        }
-        const signature = await client.tokenDeposit(
-          this.mangoGroup,
-          mangoAccount,
-          this.mangoGroup.banksMapByName.get('USDC')?.[0].mint as PublicKey,
-          freeCollateral.sub(requiredMargin).toNumber()
-        );
-        if (signature.err) {
-          throw Error(
-            `Failed to deposit USDC for margin: ${signature.err.toString()}`
+            <I80F48>missingCollateral.get(order.market)?.add(requiredMargin)
           );
         }
       }
@@ -684,16 +704,21 @@ export class MangoClobPerp {
         provider.wallet.publicKey.toBase58(),
         market
       );
-      const signature = await client.tokenDeposit(
-        this.mangoGroup,
-        mangoAccount,
-        this.mangoGroup.banksMapByName.get('USDC')?.[0].mint as PublicKey,
-        amount.toNumber()
-      );
-      if (signature.err) {
-        throw Error(
-          `Failed to deposit USDC collateral: ${signature.err.toString()}`
+      try {
+        const signature = await client.tokenDeposit(
+          this.mangoGroup,
+          mangoAccount,
+          this.mangoGroup.banksMapByName.get('USDC')?.[0].mint as PublicKey,
+          amount.toNumber()
         );
+        console.info('Depositing tokens, signature: ', signature);
+        if (signature.err) {
+          throw Error(
+            `Failed to deposit USDC for margin: ${signature.err.toString()}`
+          );
+        }
+      } catch (error) {
+        throw Error(`Failed to deposit USDC collateral: ${error}`);
       }
     }
 
@@ -808,7 +833,6 @@ export class MangoClobPerp {
       }
     );
 
-    // TODO: Make sure that gateway can parse this tx signature
     return { txHash: txSignature.signature, identifiedOrders: undefined };
   }
 }
