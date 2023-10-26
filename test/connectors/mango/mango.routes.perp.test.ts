@@ -28,7 +28,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  solana.close();
+  await solana.close();
   unpatch();
 });
 
@@ -150,7 +150,7 @@ describe('GET /clob/perp/lastTradePrice', () => {
       .expect(200)
       .expect((res) => {
         console.log(
-          '🪧 -> file: mango.perp.test.ts:153 -> .expect -> lastTradePrice:',
+          '🪧 -> file: mango.routes.perp.test.ts:153 -> .expect -> lastTradePrice:',
           res.body.lastTradePrice
         );
         expect(res.body.lastTradePrice).toBeDefined();
@@ -354,38 +354,38 @@ describe('GET /clob/perp/lastTradePrice', () => {
 
 // ABOVE IS GOOD TEST CASES
 
-// describe('GET /clob/perps/orders', () => {
-//   it('should return 200 and all orders with proper request', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/orders`)
-//       .query({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango',
-//         market: MARKET,
-//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-//         orderId: '4759278417761137954683314',
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200)
-//       .expect((res) => {
-//         console.log(
-//           '🪧 -> file: mango.perp.test.ts:369 -> .expect -> res.body:',
-//           res.body
-//         );
-//         expect(res.body).toBeDefined();
-//         expect(res.body.orders).toBeDefined();
-//       });
-//   });
+describe('GET /clob/perps/orders', () => {
+  it('should return 200 and all orders with proper request', async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/orders`)
+      .query({
+        chain: 'solana',
+        network: 'mainnet-beta',
+        connector: 'mango_perpetual',
+        market: MARKET,
+        address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+        orderId: '4759278417761137954683314',
+      })
+      .set('Accept', 'application/json')
+      .expect('Content-Type', /json/)
+      .expect(200)
+      .expect((res) => {
+        console.log(
+          '🪧 -> file: mango.routes.perp.test.ts:369 -> .expect -> res.body:',
+          res.body
+        );
+        expect(res.body).toBeDefined();
+        expect(res.body.orders).toBeDefined();
+      });
+  });
 
-//   it('should return 404 when parameters are invalid', async () => {
-//     await request(gatewayApp)
-//       .get(`/clob/perp/orders`)
-//       .query(INVALID_REQUEST)
-//       .expect(404);
-//   });
-// });
+  it('should return 404 when parameters are invalid', async () => {
+    await request(gatewayApp)
+      .get(`/clob/perp/orders`)
+      .query(INVALID_REQUEST)
+      .expect(404);
+  });
+});
 
 // describe('POST /clob/perp/order/trades', () => {
 //   it('should return 200 with proper request', async () => {
@@ -394,7 +394,7 @@ describe('GET /clob/perp/lastTradePrice', () => {
 //       .send({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
 //         market: MARKET,
 //         orderId: '4759278417761137954683314',
@@ -422,7 +422,7 @@ describe('GET /clob/perp/lastTradePrice', () => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //       })
 //       .set('Accept', 'application/json')
 //       .expect('Content-Type', /json/)
@@ -445,7 +445,7 @@ describe('GET /clob/perp/lastTradePrice', () => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         address: '0x000000',
 //         markets: [MARKET],
 //       })
@@ -470,7 +470,7 @@ describe('GET /clob/perp/lastTradePrice', () => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         address: '0x000000',
 //         createOrderParams: '',
 //         cancelOrderParams: '',
