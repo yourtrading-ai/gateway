@@ -450,6 +450,7 @@ export class MangoClobPerp {
       this._orderTracker.getOrderTrackingInfoByExchangeOrderId(exchangeOrderId);
 
     if (targetOrder === undefined) {
+      // TODO: Order is not tracked for some reason, put some error here to investigate
       return;
     }
 
