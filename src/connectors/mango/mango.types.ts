@@ -155,6 +155,8 @@ export type Market = {
   name: string;
   miniumOrderSize: number;
   tickSize: number;
+  minQuoteAmountIncrement: number;
+  minBaseAmountIncrement: number;
   takerFee: number;
   makerFee: number;
 };
