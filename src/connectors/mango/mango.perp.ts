@@ -278,6 +278,8 @@ export class MangoClobPerp {
         name: market.name,
         miniumOrderSize: market.minOrderSize,
         tickSize: market.tickSize,
+        minQuoteAmountIncrement: market.quoteLotsToUi(new BN(1)),
+        minBaseAmountIncrement: market.baseLotsToUi(new BN(1)),
         takerFee: market.takerFee.toNumber(),
         makerFee: market.makerFee.toNumber(),
       };
@@ -292,6 +294,8 @@ export class MangoClobPerp {
           name: market.name,
           miniumOrderSize: market.minOrderSize,
           tickSize: market.tickSize,
+          minQuoteAmountIncrement: market.quoteLotsToUi(new BN(1)),
+          minBaseAmountIncrement: market.baseLotsToUi(new BN(1)),
           takerFee: market.takerFee.toNumber(),
           makerFee: market.makerFee.toNumber(),
         };
