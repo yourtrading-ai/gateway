@@ -67,7 +67,7 @@ type OrderIdentifier = {
 };
 
 type IdentifiedOrder = {
-  clientOrderId: number;
+  clientOrderId: string;
   exchangeOrderId: string;
 };
 
@@ -458,6 +458,11 @@ export class MangoClobPerp {
       this.processOrderUpdate(order);
     }
 
+    console.log(
+      '🪧 -> file: mango.perp.ts:429 -> MangoClobPerp -> processOrderUpdate:',
+      this._orderTracker.getAllOrderTrackingInfo()
+    );
+
     if (req.orderId !== undefined) {
       this.processTargetedOrderUpdate(orders, req.orderId);
     }
@@ -500,6 +505,7 @@ export class MangoClobPerp {
     // Order is not found, meaning it is closed
     // Unless order is already CANCELLED, FILLED or EXPIRED, update the status
     if (
+      targetOrder.status !== OrderStatus.PENDING_CANCEL &&
       targetOrder.status !== OrderStatus.CANCELLED &&
       targetOrder.status !== OrderStatus.FILLED &&
       targetOrder.status !== OrderStatus.EXPIRED
@@ -507,6 +513,11 @@ export class MangoClobPerp {
       this._orderTracker.updateOrderStatusByExchangeOrderId(
         exchangeOrderId,
         OrderStatus.FILLED
+      );
+    } else if (targetOrder.status === OrderStatus.PENDING_CANCEL) {
+      this._orderTracker.updateOrderStatusByExchangeOrderId(
+        exchangeOrderId,
+        OrderStatus.CANCELLED
       );
     }
   }
@@ -577,11 +588,12 @@ export class MangoClobPerp {
     txHash: string;
     identifiedOrders: IdentifiedOrder[] | undefined;
   }) {
+    // TODO: should return { txHash, [{clientId1, exchangeId1}, {clientId2, exchangeId2}] } instead
     return {
       txHash: result.txHash,
-      clientOrderId:
-        result.identifiedOrders?.map((identifiedOrder) =>
-          identifiedOrder.clientOrderId.toString()
+      exchangeOrderId:
+        result.identifiedOrders?.map(
+          (identifiedOrder) => identifiedOrder.exchangeOrderId
         ) ?? [],
     };
   }
@@ -609,6 +621,10 @@ export class MangoClobPerp {
     txHash: string;
     clientOrderId?: string | string[];
   }> {
+    this._orderTracker.updateOrderStatusByExchangeOrderId(
+      req.orderId,
+      OrderStatus.PENDING_CANCEL
+    );
     const result = await this.orderUpdate(req);
     return this.mapClientOrderIDs(result);
   }
@@ -781,8 +797,7 @@ export class MangoClobPerp {
         order.market
       );
       const market = this.parsedMarkets[order.market];
-      const identifier =
-        Math.floor(Date.now() / 1000) + randomInt(3600 * 1000, 7200 * 1000);
+      const identifier = Math.floor(Date.now() / 1000) + randomInt(3600, 7200);
       const freeCollateral = this.getFreeCollateral(mangoAccount);
       const requiredMargin = MangoClobPerp.calculateMargin(
         order.price,
@@ -870,7 +885,7 @@ export class MangoClobPerp {
           this.mangoGroup,
           mangoAccount,
           market.perpMarketIndex,
-          new BN(order.orderId, 'hex')
+          new BN(order.orderId)
         )
       );
     }
@@ -894,6 +909,14 @@ export class MangoClobPerp {
     const { perpOrdersToCreate, perpOrdersToCancel } =
       extractPerpOrderParams(req);
     console.log('🪧 -> file: mango.perp.ts:771 -> MangoClobPerp -> req:', req);
+    console.log(
+      '🪧 -> file: mango.perp.ts:870 -> MangoClobPerp -> perpOrdersToCancel:',
+      perpOrdersToCancel
+    );
+    console.log(
+      '🪧 -> file: mango.perp.ts:870 -> MangoClobPerp -> perpOrdersToCreate:',
+      perpOrdersToCreate
+    );
 
     // TODO: Hacky way to identify an order
     if (perpOrdersToCancel.length === 0 && perpOrdersToCreate.length >= 1) {
@@ -939,9 +962,17 @@ export class MangoClobPerp {
       // Check order in orders if expiryTimestamp is the same as the one in payload
       for (const order of orders) {
         for (const identifier of payload.identifiers) {
+          console.log(
+            '🪧 -> file: mango.perp.ts:913 -> MangoClobPerp -> order.expiryTimestamp.toString() :',
+            order.expiryTimestamp.toString()
+          );
+          console.log(
+            '🪧 -> file: mango.perp.ts:917 -> MangoClobPerp -> expiryTimestamp:',
+            identifier.expiryTimestamp
+          );
           if (order.expiryTimestamp.toString() === identifier.expiryTimestamp) {
             identifiedOrders.push({
-              clientOrderId: identifier.clientOrderId,
+              clientOrderId: identifier.clientOrderId.toString(),
               exchangeOrderId: order.orderId.toString(),
             });
 
@@ -958,6 +989,10 @@ export class MangoClobPerp {
         }
       }
 
+      console.log(
+        '🪧 -> file: mango.perp.ts:932 -> MangoClobPerp -> identifiedOrders:',
+        identifiedOrders
+      );
       return { txHash: txSignature.signature, identifiedOrders };
     }
 
@@ -968,6 +1003,10 @@ export class MangoClobPerp {
         perpOrdersToCancel
       )),
     ];
+    console.log(
+      '🪧 -> file: mango.perp.ts:966 -> MangoClobPerp -> instructions:',
+      instructions
+    );
 
     const txSignature = await tempClient.sendAndConfirmTransaction(
       instructions,
