@@ -467,6 +467,12 @@ export class MangoClobPerp {
         this._orderTracker.getOrderTrackingInfoByExchangeOrderId(req.orderId);
 
       return targetOrder ? [targetOrder] : [];
+    } else if (req.clientOrderId !== undefined) {
+      const targetOrder = this._orderTracker.getOrderTrackingInfo(
+        req.clientOrderId
+      );
+
+      return targetOrder ? [targetOrder] : [];
     } else {
       return this._orderTracker.getAllOrderTrackingInfo();
     }
@@ -573,7 +579,7 @@ export class MangoClobPerp {
   }) {
     return {
       txHash: result.txHash,
-      clientOrderID:
+      clientOrderId:
         result.identifiedOrders?.map((identifiedOrder) =>
           identifiedOrder.clientOrderId.toString()
         ) ?? [],
@@ -582,10 +588,15 @@ export class MangoClobPerp {
 
   public async postOrder(req: PerpClobPostOrderRequest): Promise<{
     txHash: string;
-    clientOrderID?: string | string[];
+    clientOrderId?: string | string[];
   }> {
-    if (req.clientOrderID !== undefined) {
-      this._orderTracker.addOrder(req.clientOrderID, req.amount);
+    if (req.clientOrderId !== undefined) {
+      this._orderTracker.addOrder(
+        req.clientOrderId,
+        req.amount,
+        req.price,
+        req.side
+      );
     } else {
       throw Error('Client order ID is required');
     }
@@ -596,7 +607,7 @@ export class MangoClobPerp {
 
   public async deleteOrder(req: PerpClobDeleteOrderRequest): Promise<{
     txHash: string;
-    clientOrderID?: string | string[];
+    clientOrderId?: string | string[];
   }> {
     const result = await this.orderUpdate(req);
     return this.mapClientOrderIDs(result);
@@ -604,7 +615,7 @@ export class MangoClobPerp {
 
   public async batchPerpOrders(req: PerpClobBatchUpdateRequest): Promise<{
     txHash: string;
-    clientOrderID?: string | string[];
+    clientOrderId?: string | string[];
   }> {
     const result = await this.orderUpdate(req);
     return this.mapClientOrderIDs(result);
@@ -748,7 +759,7 @@ export class MangoClobPerp {
   //         Number(order.price),
   //         Number(order.amount),
   //         undefined,
-  //         Number(order.clientOrderID),
+  //         Number(order.clientOrderId),
   //         translateOrderType(order.orderType)
   //       )
   //     );
@@ -800,7 +811,7 @@ export class MangoClobPerp {
           Number(order.price),
           Number(order.amount),
           undefined,
-          Number(order.clientOrderID),
+          Number(order.clientOrderId),
           translateOrderType(order.orderType),
           undefined,
           undefined,
@@ -808,7 +819,7 @@ export class MangoClobPerp {
         )
       );
       identifiers.push({
-        clientOrderId: Number(order.clientOrderID),
+        clientOrderId: Number(order.clientOrderId),
         expiryTimestamp: identifier.toString(),
       });
     }
@@ -935,12 +946,12 @@ export class MangoClobPerp {
             });
 
             this._orderTracker.updateOrderExchangeOrderId(
-              identifier.clientOrderId,
+              identifier.clientOrderId.toString(),
               order.orderId.toString()
             );
 
             this._orderTracker.updateOrderStatus(
-              identifier.clientOrderId,
+              identifier.clientOrderId.toString(),
               OrderStatus.OPEN
             );
           }

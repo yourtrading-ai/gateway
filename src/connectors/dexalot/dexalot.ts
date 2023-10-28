@@ -253,7 +253,7 @@ export class DexalotCLOB implements CLOBish {
     if (market === undefined) throw Error('Invalid market');
 
     const clientOrderID =
-      req.clientOrderID || (await this.getClientOrderId(req.address));
+      req.clientOrderId || (await this.getClientOrderId(req.address));
 
     const txData = await this.tradePairsContract.populateTransaction.addOrder(
       req.address,
@@ -354,7 +354,7 @@ export class DexalotCLOB implements CLOBish {
 
     for (const order of orderParams) {
       clientOrderID.push(
-        order.clientOrderID || (await this.getClientOrderId(address))
+        order.clientOrderId || (await this.getClientOrderId(address))
       );
       prices.push(
         utils.parseUnits(

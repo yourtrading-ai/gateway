@@ -9,7 +9,7 @@ import bs58 from 'bs58';
 let mango: MangoClobPerp;
 let solana: Solana;
 
-const MARKET = 'BTC-PERP';
+// const MARKET = 'BTC-PERP';
 // const MARKET2 = 'ETH-PERP';
 
 const INVALID_REQUEST = {
@@ -234,7 +234,7 @@ const patchgetKeypair = (privatekey: string) => {
 //         price: '25800',
 //         amount: '0.0001',
 //         leverage: 1,
-//         clientOrderID: 123456,
+//         clientOrderId: 123456,
 //         orderType: 'LIMIT',
 //       })
 //       .set('Accept', 'application/json')
@@ -477,7 +477,7 @@ describe('POST /clob/perp/batchOrders', () => {
             side: 'SELL',
             market: 'SOL-PERP',
             leverage: 5,
-            clientOrderID: 1234,
+            clientOrderId: 1234,
           },
         ],
       })
@@ -485,8 +485,8 @@ describe('POST /clob/perp/batchOrders', () => {
       .expect('Content-Type', /json/)
       .expect(200)
       .expect((res) => {
-        expect(res.body.clientOrderID).toBeDefined();
-        res.body.clientOrderID.forEach((order: any) => {
+        expect(res.body.clientOrderId).toBeDefined();
+        res.body.clientOrderId.forEach((order: any) => {
           expect(order).toBeDefined();
           console.log(order);
         });
