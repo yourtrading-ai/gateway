@@ -162,6 +162,8 @@ export type ConnectorUnion =
   | QuipuSwap
   | MangoClobPerp;
 
+export type ConnectorWithBalances = Uniswapish | UniswapLPish | Perpish;
+
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
   : T extends UniswapLPish
