@@ -66,7 +66,7 @@ export interface CreateOrderParam {
   orderType: OrderType;
   side: Side;
   market: string;
-  clientOrderID?: string;
+  clientOrderId?: string;
 }
 
 export interface ClobPostOrderRequest
@@ -91,7 +91,7 @@ export interface ClobPostOrderResponse {
   timestamp: number;
   latency: number;
   txHash: string;
-  clientOrderID?: string | string[];
+  clientOrderId?: string | string[];
 }
 
 export type ClobDeleteOrderRequest = ClobGetOrderRequest & { address: string };
@@ -125,6 +125,7 @@ export interface PerpClobGetOrderRequest extends NetworkSelectionRequest {
   market: string;
   address: string;
   orderId?: string;
+  clientOrderId?: string;
   direction?: string; // 'buy', 'sell', 'long', 'short'
   orderTypes?: string; // string like 'buy,sell,stop_buy,stop_sell,take_buy,take_sell,buy_po,sell_po'
   limit?: number; // 1 or greater, otherwise it gets all orders
@@ -150,7 +151,7 @@ export interface CreatePerpOrderParam {
   side: Side;
   market: string;
   leverage: number;
-  clientOrderID?: number;
+  clientOrderId?: string;
 }
 
 export interface PerpClobPostOrderRequest
@@ -200,7 +201,7 @@ export function extractPerpOrderParams(
       side: req.side,
       market: req.market,
       leverage: req.leverage,
-      clientOrderID: req.clientOrderID,
+      clientOrderId: req.clientOrderId,
     });
   if ('cancelOrderParams' in req)
     perpOrdersToCancel = perpOrdersToCancel.concat(

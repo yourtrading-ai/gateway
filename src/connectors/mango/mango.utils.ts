@@ -41,27 +41,39 @@ export enum OrderStatus {
 }
 
 export type OrderTrackingInfo = {
-  clientOrderId: number;
+  clientOrderId: string;
   exchangeOrderId?: string;
   status: OrderStatus;
   orderAmount: string;
-  filledAmount?: string;
+  filledAmount: string;
+  fillPrice: string;
+  side: Side;
+  fee?: string;
+  feeToken?: string;
 };
 
 export class OrderTracker {
-  private clientOrderIdToTrackingInfo: Map<number, OrderTrackingInfo> =
+  private clientOrderIdToTrackingInfo: Map<string, OrderTrackingInfo> =
     new Map();
 
-  public addOrder(clientOrderId: number, orderAmount: string) {
+  public addOrder(
+    clientOrderId: string,
+    orderAmount: string,
+    fillPrice: string,
+    side: Side
+  ) {
     this.clientOrderIdToTrackingInfo.set(clientOrderId, {
       clientOrderId,
       status: OrderStatus.CREATED,
       orderAmount,
+      fillPrice,
+      filledAmount: '0',
+      side,
     });
   }
 
   public updateOrderExchangeOrderId(
-    clientOrderId: number,
+    clientOrderId: string,
     exchangeOrderId: string
   ) {
     const trackingInfo = this.clientOrderIdToTrackingInfo.get(clientOrderId);
@@ -71,7 +83,7 @@ export class OrderTracker {
   }
 
   public updateOrderStatus(
-    clientOrderId: number,
+    clientOrderId: string,
     status: OrderStatus,
     filledAmount?: string
   ) {
@@ -102,7 +114,7 @@ export class OrderTracker {
     }
   }
 
-  public getExchangeOrderId(clientOrderId: number) {
+  public getExchangeOrderId(clientOrderId: string) {
     const trackingInfo = this.clientOrderIdToTrackingInfo.get(clientOrderId);
     if (trackingInfo) {
       return trackingInfo.exchangeOrderId;
@@ -122,7 +134,7 @@ export class OrderTracker {
     return undefined;
   }
 
-  public getOrderTrackingInfo(clientOrderId: number) {
+  public getOrderTrackingInfo(clientOrderId: string) {
     const trackingInfo = this.clientOrderIdToTrackingInfo.get(clientOrderId);
     if (trackingInfo) {
       return trackingInfo;
