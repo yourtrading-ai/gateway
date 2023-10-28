@@ -24,7 +24,7 @@ import { KujiraConfig } from './kujira/kujira.config';
 import { OsmosisConfig } from '../chains/osmosis/osmosis.config';
 import { CarbonConfig } from './carbon/carbon.config';
 import { BalancerConfig } from './balancer/balancer.config';
-import { MangoConfig } from './mango/mango.config';
+import { MangoConfig } from './mango_perpetual/mango.config';
 
 export namespace ConnectorsRoutes {
   export const router = Router();

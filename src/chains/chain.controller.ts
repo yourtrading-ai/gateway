@@ -109,15 +109,17 @@ export async function balances(
   if (connector?.balances !== undefined) {
     const connectorBalances = await connector.balances(req);
     for (const key of Object.keys(connectorBalances)) {
-      if (balances[key] === undefined) {
-        balances[key] = connectorBalances[key];
+      if (balances['balances'][key] === undefined) {
+        balances['balances'][key] = connectorBalances[key];
       } else {
-        balances[key] = new Decimal(balances[key])
+        balances['balances'][key] = new Decimal(balances['balances'][key])
           .add(new Decimal(connectorBalances[key]))
           .toString();
       }
     }
   }
+
+  console.log('🪧 -> file: chain.controller.ts:123 -> balances:', balances);
 
   return {
     network: chain.chain,
