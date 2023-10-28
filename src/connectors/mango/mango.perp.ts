@@ -58,6 +58,8 @@ import {
 import { mangoDataApi, MangoDataApi } from './mango.api';
 import { max } from 'mathjs';
 import Dict = NodeJS.Dict;
+import { BalanceRequest } from '../../network/network.requests';
+import Decimal from 'decimal.js-light';
 
 type OrderIdentifier = {
   clientOrderId: number;
@@ -407,6 +409,34 @@ export class MangoClobPerp {
     } else {
       return trades;
     }
+  }
+
+  // TODO: Add test
+  public async balances(req: BalanceRequest): Promise<Record<string, string>> {
+    const mangoAccounts = this.mangoAccounts[req.address];
+
+    if (mangoAccounts === undefined) {
+      return {};
+    }
+
+    const balances: Record<string, string> = {};
+    for (const [, account] of Object.entries(mangoAccounts)) {
+      if (account === undefined) continue;
+      for (const token of account.tokensActive()) {
+        const bank = this.mangoGroup.getFirstBankByTokenIndex(token.tokenIndex);
+        const native = token.balance(bank);
+        const symbol = bank.name;
+        if (balances[symbol] === undefined) {
+          balances[symbol] = native.toString();
+        } else {
+          balances[symbol] = new Decimal(balances[symbol])
+            .add(new Decimal(native.toString()))
+            .toString();
+        }
+      }
+    }
+
+    return balances;
   }
 
   public async orders(
