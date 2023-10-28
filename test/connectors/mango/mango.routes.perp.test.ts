@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { gatewayApp } from '../../../src/app';
-import { MangoClobPerp } from '../../../src/connectors/mango/mango.perp';
+import { MangoClobPerp } from '../../../src/connectors/mango_perpetual/mango.perp';
 import { Solana } from '../../../src/chains/solana/solana';
 import { patch, unpatch } from '../../../test/services/patch';
 import { Keypair } from '@solana/web3.js';
@@ -9,7 +9,7 @@ import bs58 from 'bs58';
 let mango: MangoClobPerp;
 let solana: Solana;
 
-// const MARKET = 'BTC-PERP';
+// const MARKET = 'SOL-PERP';
 // const MARKET2 = 'ETH-PERP';
 
 const INVALID_REQUEST = {
@@ -23,7 +23,7 @@ beforeAll(async () => {
   mango = MangoClobPerp.getInstance('solana', 'mainnet-beta');
   await mango.init();
   patchgetKeypair(
-    'Qk6rD8bBVEr95yHEh47UrX1YEKSFiL4horxd1pSP3hPpFCu2fNVkjUuistJYae1cV8kQn4G6frsLBhZfESV5JLB'
+    '2wsjL4gpGB5RMr5HktAoN7quJmxqNbzzjx49eQ7cfgb6SrC3kCgFcmcnNbmHekVpjWHMkkTSC7xrPoNghxWRaqnH'
   );
 });
 
@@ -46,7 +46,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //       })
 //       .set('Accept', 'application/json')
 //       .expect('Content-Type', /json/)
@@ -71,7 +71,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //       })
 //       .set('Accept', 'application/json')
@@ -89,7 +89,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET2,
 //       })
 //       .set('Accept', 'application/json')
@@ -116,7 +116,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //       })
 //       .set('Accept', 'application/json')
@@ -150,7 +150,7 @@ const patchgetKeypair = (privatekey: string) => {
 //      .expect(200)
 //      .expect((res) => {
 //        console.log(
-//          '🪧 -> file: mango.routes.perp.test.ts:153 -> .expect -> lastTradePrice:',
+//          '🪧 -> file: mango_perpetual.routes.perp.test.ts:153 -> .expect -> lastTradePrice:',
 //          res.body.lastTradePrice
 //        );
 //        expect(res.body.lastTradePrice).toBeDefined();
@@ -173,7 +173,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .send({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //       })
 //       .set('Accept', 'application/json')
@@ -200,7 +200,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .send({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         address: '21cxPEMbCmByKWxDGNRZCa6BWfo6WEq5x4cBZ91mEnid',
 //         market: MARKET2,
 //       })
@@ -227,7 +227,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .send({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //         address: '21cxPEMbCmByKWxDGNRZCa6BWfo6WEq5x4cBZ91mEnid',
 //         side: 'BUY',
@@ -260,7 +260,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //         address: '21cxPEMbCmByKWxDGNRZCa6BWfo6WEq5x4cBZ91mEnid',
 //       })
@@ -290,7 +290,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //         address: '21cxPEMbCmByKWxDGNRZCa6BWfo6WEq5x4cBZ91mEnid',
 //       })
@@ -311,7 +311,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .send({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //         address: '21cxPEMbCmByKWxDGNRZCa6BWfo6WEq5x4cBZ91mEnid',
 //         orderId: orderId,
@@ -330,7 +330,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .query({
 //         chain: 'solana',
 //         network: 'mainnet-beta',
-//         connector: 'mango',
+//         connector: 'mango_perpetual',
 //         market: MARKET,
 //         address: '21cxPEMbCmByKWxDGNRZCa6BWfo6WEq5x4cBZ91mEnid',
 //       })
@@ -352,8 +352,6 @@ const patchgetKeypair = (privatekey: string) => {
 //   });
 // });
 
-// ABOVE IS GOOD TEST CASES
-
 // describe('GET /clob/perps/orders', () => {
 //   it('should return 200 and all orders with proper request', async () => {
 //     await request(gatewayApp)
@@ -371,7 +369,7 @@ const patchgetKeypair = (privatekey: string) => {
 //       .expect(200)
 //       .expect((res) => {
 //         console.log(
-//           '🪧 -> file: mango.routes.perp.test.ts:369 -> .expect -> res.body:',
+//           '🪧 -> file: mango_perpetual.routes.perp.test.ts:369 -> .expect -> res.body:',
 //           res.body
 //         );
 //         expect(res.body).toBeDefined();

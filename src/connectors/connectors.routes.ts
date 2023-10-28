@@ -23,7 +23,7 @@ import { XRPLCLOBConfig } from './xrpl/xrpl.clob.config';
 import { KujiraConfig } from './kujira/kujira.config';
 import { QuipuswapConfig } from './quipuswap/quipuswap.config';
 import { CarbonConfig } from './carbon/carbon.config';
-import { MangoConfig } from './mango/mango.config';
+import { MangoConfig } from './mango_perpetual/mango.config';
 
 export namespace ConnectorsRoutes {
   export const router = Router();

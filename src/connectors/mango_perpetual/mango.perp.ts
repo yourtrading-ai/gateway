@@ -209,16 +209,11 @@ export class MangoClobPerp {
 
     // check if user has been initialized and accounts fetched
     if (this.mangoAccounts[address] === undefined) {
-      this.mangoAccounts[address] = {};
-      const accounts = await this._client.getMangoAccountsForOwner(
-        this.mangoGroup,
-        new PublicKey(address)
+      foundAccount = await this.fetchExistingAccounts(
+        address,
+        market,
+        foundAccount
       );
-      accounts.forEach((account) => {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this.mangoAccounts[address]![account.name] = account;
-        if (account.name === market) foundAccount = account;
-      });
       if (foundAccount) return foundAccount;
     }
 
@@ -272,6 +267,24 @@ export class MangoClobPerp {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.mangoAccounts[address]![market] = newAccount;
     return newAccount;
+  }
+
+  private async fetchExistingAccounts(
+    address: string,
+    market: string | undefined,
+    foundAccount: MangoAccount | undefined
+  ) {
+    this.mangoAccounts[address] = {};
+    const accounts = await this._client.getMangoAccountsForOwner(
+      this.mangoGroup,
+      new PublicKey(address)
+    );
+    accounts.forEach((account) => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.mangoAccounts[address]![account.name] = account;
+      if (market && account.name === market) foundAccount = account;
+    });
+    return foundAccount;
   }
 
   public async markets(
@@ -369,12 +382,23 @@ export class MangoClobPerp {
     // TODO: fills return empty, get stable price as temp fix
     await this.mangoGroup.reloadPerpMarkets(this._client);
     const market = this.parsedMarkets[req.market];
-    // const fills = await this.loadFills(market);
+    const bank = this.mangoGroup.getFirstBankByTokenIndex(
+      market.settleTokenIndex
+    );
+    const base = market.name.split('-')[0];
+    const decimals = <string>(
+      bank.mintDecimals.toString()
+    );
+    const stableDecimals = base === 'SOL' ? 3 : 6;
 
-    // if (fills.fills.length > 0) this._lastTradePrice = fills.fills[0].price;
-    // return this._lastTradePrice.toString();
+    const stablePrice = I80F48.fromString(
+      market.stablePriceModel.stablePrice.toString()
+    );
 
-    return market.stablePriceModel.stablePrice.toString();
+    return stablePrice
+      .mul(I80F48.fromString(`1e${decimals}`))
+      .div(I80F48.fromString(`1e${stableDecimals}`))
+      .toString();
   }
 
   public async trades(
@@ -413,29 +437,51 @@ export class MangoClobPerp {
 
   // TODO: Add test
   public async balances(req: BalanceRequest): Promise<Record<string, string>> {
-    const mangoAccounts = this.mangoAccounts[req.address];
+    if (req.tokenSymbols.find((symbol) => symbol === 'PERP')) {
+      req.tokenSymbols.push('USDC');
+      req.tokenSymbols.splice(req.tokenSymbols.indexOf('PERP'), 1);
+    }
+
+    let mangoAccounts = this.mangoAccounts[req.address];
+
+    if (mangoAccounts === undefined) {
+      await this.fetchExistingAccounts(req.address, undefined, undefined);
+      mangoAccounts = this.mangoAccounts[req.address];
+    }
 
     if (mangoAccounts === undefined) {
       return {};
     }
 
-    const balances: Record<string, string> = {};
+    const balancesMap: Map<string, string> = new Map<string, string>();
     for (const [, account] of Object.entries(mangoAccounts)) {
       if (account === undefined) continue;
       for (const token of account.tokensActive()) {
         const bank = this.mangoGroup.getFirstBankByTokenIndex(token.tokenIndex);
-        const native = token.balance(bank);
+        const amount = token
+          .balance(bank)
+          .div(I80F48.fromString(`1e${bank.mintDecimals}`));
         const symbol = bank.name;
-        if (balances[symbol] === undefined) {
-          balances[symbol] = native.toString();
+        if (balancesMap.get(symbol) === undefined) {
+          balancesMap.set(symbol, amount.toString());
         } else {
-          balances[symbol] = new Decimal(balances[symbol])
-            .add(new Decimal(native.toString()))
-            .toString();
+          const newAmount = new Decimal(balancesMap.get(symbol)!).add(
+            new Decimal(amount.toString())
+          );
+          balancesMap.set(symbol, newAmount.toString());
         }
       }
     }
 
+    console.log(
+      '🪧 -> file: mango.perp.ts:369 -> MangoClobPerp -> balances:',
+      balancesMap
+    );
+
+    const balances: Record<string, string> = {};
+    for (const [key, value] of balancesMap.entries()) {
+      balances[key] = value;
+    }
     return balances;
   }
 

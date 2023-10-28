@@ -47,6 +47,8 @@ export class SolanaController {
     solanaish: Solanaish,
     req: SolanaBalanceRequest
   ): Promise<SolanaBalanceResponse | string> {
+    if (req.tokenSymbols.find((symbol) => symbol === 'PERP'))
+      req.tokenSymbols.push('USDC');
     const initTime = Date.now();
     let wallet: Keypair;
     try {

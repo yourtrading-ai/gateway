@@ -45,7 +45,7 @@ import { XRPLCLOB } from '../connectors/xrpl/xrpl';
 import { QuipuSwap } from '../connectors/quipuswap/quipuswap';
 import { Carbonamm } from '../connectors/carbon/carbonAMM';
 import { Solana } from '../chains/solana/solana';
-import { MangoClobPerp } from '../connectors/mango/mango.perp';
+import { MangoClobPerp } from '../connectors/mango_perpetual/mango.perp';
 
 export type ChainUnion =
   | Algorand
