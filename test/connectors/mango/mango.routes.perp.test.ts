@@ -23,7 +23,7 @@ beforeAll(async () => {
   mango = MangoClobPerp.getInstance('solana', 'mainnet-beta');
   await mango.init();
   patchgetKeypair(
-    '2wsjL4gpGB5RMr5HktAoN7quJmxqNbzzjx49eQ7cfgb6SrC3kCgFcmcnNbmHekVpjWHMkkTSC7xrPoNghxWRaqnH'
+    '' // Add your private key here
   );
 });
 
@@ -434,67 +434,75 @@ const patchgetKeypair = (privatekey: string) => {
 //   });
 // });
 //
-// describe('POST /clob/perp/positions', () => {
-//   it('should return 200 with proper request', async () => {
-//     await request(gatewayApp)
-//       .post(`/clob/perp/positions`)
-//       .send({
-//         chain: 'solana',
-//         network: 'mainnet-beta',
-//         connector: 'mango_perpetual',
-//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-//         markets: [MARKET],
-//       })
-//       .set('Accept', 'application/json')
-//       .expect('Content-Type', /json/)
-//       .expect(200);
-//   });
-//
-//   it('should return 404 when parameters are invalid', async () => {
-//     await request(gatewayApp)
-//       .post(`/clob/perp/positions`)
-//       .send(INVALID_REQUEST)
-//       .expect(404);
-//   });
-// });
-//
-describe('POST /clob/perp/batchOrders', () => {
+describe('POST /clob/perp/positions', () => {
   it('should return 200 with proper request', async () => {
     await request(gatewayApp)
-      .post(`/clob/perp/batchOrders`)
+      .post(`/clob/perp/positions`)
       .send({
         chain: 'solana',
         network: 'mainnet-beta',
         connector: 'mango_perpetual',
         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-        createOrderParams: [
-          {
-            price: 100,
-            amount: 0.01,
-            orderType: 'LIMIT',
-            side: 'SELL',
-            market: 'SOL-PERP',
-            leverage: 5,
-            clientOrderId: 1234,
-          },
-        ],
+        markets: ['BTC-PERP'],
       })
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)
       .expect(200)
       .expect((res) => {
-        expect(res.body.clientOrderId).toBeDefined();
-        res.body.clientOrderId.forEach((order: any) => {
-          expect(order).toBeDefined();
-          console.log(order);
-        });
+        expect(res.body).toBeDefined();
+        console.log(
+          '🪧 -> file: mango.routes.perp.test.ts:453 -> .expect -> res.body:',
+          res.body
+        );
       });
   });
 
   it('should return 404 when parameters are invalid', async () => {
     await request(gatewayApp)
-      .post(`/clob/perp/batchOrders`)
+      .post(`/clob/perp/positions`)
       .send(INVALID_REQUEST)
       .expect(404);
   });
 });
+//
+
+// describe('POST /clob/perp/batchOrders', () => {
+//   it('should return 200 with proper request', async () => {
+//     await request(gatewayApp)
+//       .post(`/clob/perp/batchOrders`)
+//       .send({
+//         chain: 'solana',
+//         network: 'mainnet-beta',
+//         connector: 'mango_perpetual',
+//         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
+//         createOrderParams: [
+//           {
+//             price: 100,
+//             amount: 0.01,
+//             orderType: 'LIMIT',
+//             side: 'SELL',
+//             market: 'SOL-PERP',
+//             leverage: 5,
+//             clientOrderId: 1234,
+//           },
+//         ],
+//       })
+//       .set('Accept', 'application/json')
+//       .expect('Content-Type', /json/)
+//       .expect(200)
+//       .expect((res) => {
+//         expect(res.body.clientOrderId).toBeDefined();
+//         res.body.clientOrderId.forEach((order: any) => {
+//           expect(order).toBeDefined();
+//           console.log(order);
+//         });
+//       });
+//   });
+
+//   it('should return 404 when parameters are invalid', async () => {
+//     await request(gatewayApp)
+//       .post(`/clob/perp/batchOrders`)
+//       .send(INVALID_REQUEST)
+//       .expect(404);
+//   });
+// });

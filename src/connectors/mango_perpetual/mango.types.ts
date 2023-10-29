@@ -160,3 +160,12 @@ export type Market = {
   takerFee: number;
   makerFee: number;
 };
+
+export type Position = {
+  market: string;
+  side: string;
+  averageEntryPrice: string;
+  unrealizedPnl: string;
+  amount: string;
+  leverage: string;
+};
