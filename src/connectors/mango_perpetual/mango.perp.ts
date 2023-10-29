@@ -39,7 +39,12 @@ import {
   PerpOrder,
   PerpPosition,
 } from '@blockworks-foundation/mango-v4';
-import { FundingPayment, Market, PerpTradeActivity } from './mango.types';
+import {
+  FundingPayment,
+  Market,
+  PerpTradeActivity,
+  Position,
+} from './mango.types';
 import {
   randomInt,
   translateOrderSide,
@@ -284,6 +289,7 @@ export class MangoClobPerp {
       this.mangoAccounts[address]![account.name] = account;
       if (market && account.name === market) foundAccount = account;
     });
+
     return foundAccount;
   }
 
@@ -386,9 +392,7 @@ export class MangoClobPerp {
       market.settleTokenIndex
     );
     const base = market.name.split('-')[0];
-    const decimals = <string>(
-      bank.mintDecimals.toString()
-    );
+    const decimals = <string>bank.mintDecimals.toString();
     const stableDecimals = base === 'SOL' ? 3 : 6;
 
     const stablePrice = I80F48.fromString(
@@ -765,7 +769,7 @@ export class MangoClobPerp {
 
   public async positions(
     req: PerpClobPositionRequest
-  ): Promise<Array<PerpPosition>> {
+  ): Promise<Array<Position>> {
     const marketIndexes = [];
     for (const market of req.markets) {
       marketIndexes.push(this.parsedMarkets[market].perpMarketIndex);
@@ -778,26 +782,73 @@ export class MangoClobPerp {
     marketIndexes: PerpMarketIndex[],
     ownerPk: string
   ) {
-    const positions: PerpPosition[] = [];
+    let positions: PerpPosition[] = [];
 
-    marketIndexes.map((marketIndex) => {
-      const mangoAccount = this.getExistingMangoAccount(
+    for (const marketIndex of marketIndexes) {
+      const market = Object.values(this.parsedMarkets).find(
+        (market) => market.perpMarketIndex === marketIndex
+      );
+
+      const mangoAccount = await this.fetchExistingAccounts(
         ownerPk,
-        marketIndex.toString()
+        market?.name,
+        undefined
       );
 
       if (mangoAccount === undefined) {
-        return;
+        break;
       }
+
+      mangoAccount.reload(this._client);
 
       const filteredPerpPositions = mangoAccount
         .perpActive()
         .filter((pp) => pp.marketIndex === marketIndex);
 
-      positions.concat(filteredPerpPositions);
+      positions = positions.concat(filteredPerpPositions);
+    }
+
+    console.log(
+      '🪧 -> file: mango.perp.ts:826 -> MangoClobPerp -> positions:',
+      positions
+    );
+    const mappedPositions: Position[] = [];
+
+    positions.forEach((position) => {
+      const side = position.basePositionLots.gte(new BN(0)) ? 'LONG' : 'SHORT'; // TODO: decide what happen if position lots is zero
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const market = Object.values(this.parsedMarkets).find(
+        (market) => market.perpMarketIndex === position.marketIndex
+      )!;
+      const baseNative = I80F48.fromI64(
+        position.basePositionLots.mul(market.baseLotSize)
+      ).abs();
+      const positionValue = I80F48.fromNumber(
+        market.stablePriceModel.stablePrice
+      )
+        .mul(baseNative)
+        .toNumber();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const unrealized = new BN(market!.settlePnlLimitFactor * positionValue);
+      const entryPrice = position.getAverageEntryPriceUi(market);
+      mappedPositions.push({
+        market: market.name,
+        side,
+        unrealizedPnl: unrealized.toString(),
+        averageEntryPrice: entryPrice.toString(),
+        amount: baseNative.toString(),
+        leverage: '1', // TODO: calculate leverage
+      });
     });
 
-    return positions;
+    console.log(
+      '🪧 -> file: mango.perp.ts:856 -> MangoClobPerp -> mappedPositions:',
+      mappedPositions
+    );
+
+    // TODO: position calculation is not correct, need to fix
+
+    return mappedPositions;
   }
 
   // private async buildPostOrder(
@@ -954,15 +1005,6 @@ export class MangoClobPerp {
     const tempClient = this.connectMangoClient(addressKeyPair);
     const { perpOrdersToCreate, perpOrdersToCancel } =
       extractPerpOrderParams(req);
-    console.log('🪧 -> file: mango.perp.ts:771 -> MangoClobPerp -> req:', req);
-    console.log(
-      '🪧 -> file: mango.perp.ts:870 -> MangoClobPerp -> perpOrdersToCancel:',
-      perpOrdersToCancel
-    );
-    console.log(
-      '🪧 -> file: mango.perp.ts:870 -> MangoClobPerp -> perpOrdersToCreate:',
-      perpOrdersToCreate
-    );
 
     // TODO: Hacky way to identify an order
     if (perpOrdersToCancel.length === 0 && perpOrdersToCreate.length >= 1) {
@@ -972,20 +1014,12 @@ export class MangoClobPerp {
         walletProvider,
         perpOrdersToCreate
       );
-      console.log(
-        '🪧 -> file: mango.perp.ts:785 -> MangoClobPerp -> payload:',
-        payload
-      );
 
       const txSignature = await tempClient.sendAndConfirmTransaction(
         payload.instructions,
         {
           alts: this.mangoGroup.addressLookupTablesList,
         }
-      );
-      console.log(
-        '🪧 -> file: mango.perp.ts:793 -> MangoClobPerp -> txSignature:',
-        txSignature
       );
 
       const mangoAccount = await this.getOrCreateMangoAccount(
@@ -1000,22 +1034,10 @@ export class MangoClobPerp {
         this.parsedMarkets[perpOrdersToCreate[0].market].perpMarketIndex,
         true
       );
-      console.log(
-        '🪧 -> file: mango.perp.ts:808 -> MangoClobPerp -> orders:',
-        orders
-      );
 
       // Check order in orders if expiryTimestamp is the same as the one in payload
       for (const order of orders) {
         for (const identifier of payload.identifiers) {
-          console.log(
-            '🪧 -> file: mango.perp.ts:913 -> MangoClobPerp -> order.expiryTimestamp.toString() :',
-            order.expiryTimestamp.toString()
-          );
-          console.log(
-            '🪧 -> file: mango.perp.ts:917 -> MangoClobPerp -> expiryTimestamp:',
-            identifier.expiryTimestamp
-          );
           if (order.expiryTimestamp.toString() === identifier.expiryTimestamp) {
             identifiedOrders.push({
               clientOrderId: identifier.clientOrderId.toString(),
@@ -1035,10 +1057,6 @@ export class MangoClobPerp {
         }
       }
 
-      console.log(
-        '🪧 -> file: mango.perp.ts:932 -> MangoClobPerp -> identifiedOrders:',
-        identifiedOrders
-      );
       return { txHash: txSignature.signature, identifiedOrders };
     }
 
@@ -1049,10 +1067,6 @@ export class MangoClobPerp {
         perpOrdersToCancel
       )),
     ];
-    console.log(
-      '🪧 -> file: mango.perp.ts:966 -> MangoClobPerp -> instructions:',
-      instructions
-    );
 
     const txSignature = await tempClient.sendAndConfirmTransaction(
       instructions,
