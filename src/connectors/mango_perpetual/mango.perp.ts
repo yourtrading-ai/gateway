@@ -477,11 +477,6 @@ export class MangoClobPerp {
       }
     }
 
-    console.log(
-      '🪧 -> file: mango.perp.ts:369 -> MangoClobPerp -> balances:',
-      balancesMap
-    );
-
     const balances: Record<string, string> = {};
     for (const [key, value] of balancesMap.entries()) {
       balances[key] = value;
@@ -1019,6 +1014,7 @@ export class MangoClobPerp {
         payload.instructions,
         {
           alts: this.mangoGroup.addressLookupTablesList,
+          skipPreflight: true,
         }
       );
 
@@ -1072,6 +1068,7 @@ export class MangoClobPerp {
       instructions,
       {
         alts: this.mangoGroup.addressLookupTablesList,
+        skipPreflight: true,
       }
     );
 
