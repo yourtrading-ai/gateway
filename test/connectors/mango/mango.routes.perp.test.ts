@@ -443,7 +443,7 @@ describe('POST /clob/perp/positions', () => {
         network: 'mainnet-beta',
         connector: 'mango_perpetual',
         address: '2DMmy7db2HX7SNEaaMjxs96mG9DE55fzgniSya4B29Xh',
-        markets: ['BTC-PERP'],
+        markets: [],
       })
       .set('Accept', 'application/json')
       .expect('Content-Type', /json/)

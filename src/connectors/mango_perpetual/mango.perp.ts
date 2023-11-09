@@ -38,6 +38,7 @@ import {
   PerpMarketIndex,
   PerpOrder,
   PerpPosition,
+  toUiDecimalsForQuote,
 } from '@blockworks-foundation/mango-v4';
 import {
   FundingPayment,
@@ -778,8 +779,17 @@ export class MangoClobPerp {
     ownerPk: string
   ) {
     let positions: PerpPosition[] = [];
+    let marketIndexesToQuery = marketIndexes;
+    await this.mangoGroup.reloadPerpMarkets(this._client);
+    await this.loadMarkets(this.mangoGroup);
 
-    for (const marketIndex of marketIndexes) {
+    if (marketIndexes.length === 0) {
+      marketIndexesToQuery = Object.values(this.parsedMarkets).map(
+        (market) => market.perpMarketIndex
+      );
+    }
+
+    for (const marketIndex of marketIndexesToQuery) {
       const market = Object.values(this.parsedMarkets).find(
         (market) => market.perpMarketIndex === marketIndex
       );
@@ -791,10 +801,10 @@ export class MangoClobPerp {
       );
 
       if (mangoAccount === undefined) {
-        break;
+        continue;
       }
 
-      mangoAccount.reload(this._client);
+      await mangoAccount.reload(this._client);
 
       const filteredPerpPositions = mangoAccount
         .perpActive()
@@ -815,23 +825,19 @@ export class MangoClobPerp {
       const market = Object.values(this.parsedMarkets).find(
         (market) => market.perpMarketIndex === position.marketIndex
       )!;
-      const baseNative = I80F48.fromI64(
-        position.basePositionLots.mul(market.baseLotSize)
-      ).abs();
-      const positionValue = I80F48.fromNumber(
-        market.stablePriceModel.stablePrice
-      )
-        .mul(baseNative)
-        .toNumber();
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const unrealized = new BN(market!.settlePnlLimitFactor * positionValue);
       const entryPrice = position.getAverageEntryPriceUi(market);
+      const priceChange = market.stablePriceModel.stablePrice - entryPrice;
+
+      const unrealizedPnl = toUiDecimalsForQuote(
+        position.getBasePosition(market).mul(I80F48.fromNumber(priceChange))
+      );
+
       mappedPositions.push({
         market: market.name,
         side,
-        unrealizedPnl: unrealized.toString(),
+        unrealizedPnl: unrealizedPnl.toString(),
         averageEntryPrice: entryPrice.toString(),
-        amount: baseNative.toString(),
+        amount: market.baseLotsToUi(position.basePositionLots.abs()).toString(),
         leverage: '1', // TODO: calculate leverage
       });
     });
