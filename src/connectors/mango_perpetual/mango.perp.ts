@@ -813,14 +813,12 @@ export class MangoClobPerp {
       positions = positions.concat(filteredPerpPositions);
     }
 
-    console.log(
-      '🪧 -> file: mango.perp.ts:826 -> MangoClobPerp -> positions:',
-      positions
-    );
     const mappedPositions: Position[] = [];
 
     positions.forEach((position) => {
-      const side = position.basePositionLots.gte(new BN(0)) ? 'LONG' : 'SHORT'; // TODO: decide what happen if position lots is zero
+      if (position.basePositionLots.eq(new BN(0))) return;
+
+      const side = position.basePositionLots.gt(new BN(0)) ? 'LONG' : 'SHORT';
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const market = Object.values(this.parsedMarkets).find(
         (market) => market.perpMarketIndex === position.marketIndex
@@ -841,13 +839,6 @@ export class MangoClobPerp {
         leverage: '1', // TODO: calculate leverage
       });
     });
-
-    console.log(
-      '🪧 -> file: mango.perp.ts:856 -> MangoClobPerp -> mappedPositions:',
-      mappedPositions
-    );
-
-    // TODO: position calculation is not correct, need to fix
 
     return mappedPositions;
   }
