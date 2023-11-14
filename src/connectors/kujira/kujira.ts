@@ -263,7 +263,7 @@ export class KujiraCLOB implements CLOBish {
     req: ClobPostOrderRequest
   ): Promise<{ txHash: string; id?: string }> {
     const result = await this.kujira.placeOrder({
-      clientId: req.clientOrderID,
+      clientId: req.clientOrderId,
       marketName: convertHumingbotMarketNameToMarketName(req.market),
       ownerAddress: req.address,
       side: req.side as OrderSide,
