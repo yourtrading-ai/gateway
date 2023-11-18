@@ -93,10 +93,12 @@ export class MangoClobPerp {
   public conf: MangoConfig.NetworkConfig;
 
   private _ready: boolean = false;
+  private _accountInProcess: string[] = [];
   // private _lastTradePrice: number = 0;
   public parsedMarkets: PerpClobMarkets<PerpMarket> = {};
   // @note: Contains all MangoAccounts, grouped by owner address and base asset
   public mangoAccounts: Dict<Dict<MangoAccount>> = {};
+
 
   private constructor(_chain: string, network: string) {
     this._chain = Solana.getInstance(network);
@@ -210,19 +212,48 @@ export class MangoClobPerp {
     address: string,
     market: string
   ): Promise<MangoAccount> {
-    let foundAccount = this.getExistingMangoAccount(address, market);
-    if (foundAccount) return foundAccount;
+    let isReadyToReturn = false;
 
-    // check if user has been initialized and accounts fetched
-    if (this.mangoAccounts[address] === undefined) {
-      foundAccount = await this.fetchExistingAccounts(
-        address,
-        market,
-        foundAccount
+    // Check if account is already in process, if yes then wait for it to finish
+    while (this._accountInProcess.includes(`${address}-${market}`)) {
+      console.log(
+        `Account finding for ${address}-${market} in process, waiting...`
       );
-      if (foundAccount) return foundAccount;
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
 
+    // Add account to in-process list to prevent duplicate account creation
+    this._accountInProcess.push(`${address}-${market}`);
+
+    // Phase 1: Check if account already exists
+    console.log('Checking if account already exists...');
+    let foundAccount = this.getExistingMangoAccount(address, market);
+    if (foundAccount) {
+      isReadyToReturn = true;
+    }
+
+    // check if user has been initialized and accounts fetched
+    if (!isReadyToReturn && this.mangoAccounts[address] === undefined) {
+      foundAccount = await this.fetchExistingAccounts(address, market);
+      if (foundAccount) {
+        isReadyToReturn = true;
+      }
+    }
+
+    if (isReadyToReturn) {
+      // Find and remove account from in-process list
+      const index = this._accountInProcess.indexOf(`${address}-${market}`);
+      if (index > -1) {
+        this._accountInProcess.splice(index, 1);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      console.log('Found account: ', foundAccount!.name);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      return foundAccount!;
+    }
+
+    // Phase 2: No existing account found -> Create new account
     // get accounts and find accountNumber to use to create new MangoAccount
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const accounts = Object.values(this.mangoAccounts[address]!).filter(
@@ -242,6 +273,21 @@ export class MangoClobPerp {
 
     // @todo: Check if there is account space optimization possible with tokenCount
     try {
+      // Add timeout to automatically remove account in process, let it run for at least 5 seconds
+      setTimeout(() => {
+        const index = this._accountInProcess.indexOf(`${address}-${market}`);
+        if (index > -1) {
+          this._accountInProcess.splice(index, 1);
+          console.error(
+            `Account creation timeout reached, but account was not removed from in-process list: ${address}-${market}`
+          );
+        } else {
+          console.error(
+            `Account creation timeout reached, but account was already removed from in-process list: ${address}-${market}`
+          );
+        }
+      }, 5000);
+
       const tempClient = this.connectMangoClient(addressKeyPair);
       console.log('Creating account: ', accountNumber, market);
       await tempClient.createMangoAccount(
@@ -272,19 +318,26 @@ export class MangoClobPerp {
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.mangoAccounts[address]![market] = newAccount;
+
+    // Find and remove account from in-process list
+    const index = this._accountInProcess.indexOf(`${address}-${market}`);
+    if (index > -1) {
+      this._accountInProcess.splice(index, 1);
+    }
+
     return newAccount;
   }
 
   private async fetchExistingAccounts(
     address: string,
-    market: string | undefined,
-    foundAccount: MangoAccount | undefined
+    market: string | undefined
   ) {
-    this.mangoAccounts[address] = {};
+    let foundAccount: MangoAccount | undefined;
     const accounts = await this._client.getMangoAccountsForOwner(
       this.mangoGroup,
       new PublicKey(address)
     );
+    this.mangoAccounts[address] = {};
     accounts.forEach((account) => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this.mangoAccounts[address]![account.name] = account;
@@ -450,7 +503,7 @@ export class MangoClobPerp {
     let mangoAccounts = this.mangoAccounts[req.address];
 
     if (mangoAccounts === undefined) {
-      await this.fetchExistingAccounts(req.address, undefined, undefined);
+      await this.fetchExistingAccounts(req.address, undefined);
       mangoAccounts = this.mangoAccounts[req.address];
     }
 
@@ -504,10 +557,10 @@ export class MangoClobPerp {
       this.processOrderUpdate(order);
     }
 
-    console.log(
-      '🪧 -> file: mango.perp.ts:429 -> MangoClobPerp -> processOrderUpdate:',
-      this._orderTracker.getAllOrderTrackingInfo()
-    );
+    // console.log(
+    //   '🪧 -> file: mango.perp.ts:429 -> MangoClobPerp -> processOrderUpdate:',
+    //   this._orderTracker.getAllOrderTrackingInfo()
+    // );
 
     if (req.orderId !== undefined) {
       this.processTargetedOrderUpdate(orders, req.orderId);
@@ -794,10 +847,13 @@ export class MangoClobPerp {
         (market) => market.perpMarketIndex === marketIndex
       );
 
+      if (market === undefined) {
+        continue;
+      }
+
       const mangoAccount = await this.fetchExistingAccounts(
         ownerPk,
-        market?.name,
-        undefined
+        market.name
       );
 
       if (mangoAccount === undefined) {
