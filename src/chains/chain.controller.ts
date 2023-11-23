@@ -103,7 +103,6 @@ export async function balances(
   connector: Connector<ConnectorWithBalances> | undefined
 ): Promise<BalanceResponse | string> {
   const initTime = Date.now();
-  console.log('🪧 -> file: chain.controller.ts:108 -> req:', req);
   const balances = await chain.controller.balances(chain, req);
 
   if (connector?.balances !== undefined) {
