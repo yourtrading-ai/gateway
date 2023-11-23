@@ -64,10 +64,10 @@ export class SolanaController {
     const balances = await solanaish.getBalances(wallet);
 
     const filteredBalances = toSolanaBalances(balances, req.tokenSymbols);
-    console.log(
-      '🪧 -> file: solana.controllers.ts:65 -> SolanaController -> filteredBalances:',
-      filteredBalances
-    );
+    // console.log(
+    //   '🪧 -> file: solana.controllers.ts:65 -> SolanaController -> filteredBalances:',
+    //   filteredBalances
+    // );
 
     return {
       network: solanaish.network,
