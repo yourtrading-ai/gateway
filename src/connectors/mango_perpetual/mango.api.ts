@@ -16,15 +16,17 @@ export class MangoDataApi {
   async fetchPerpTradeHistory(
     mangoAccount: string,
     limit: number = 10000,
-    skip: number = 0
+    offset: number = 0,
+    reverseChrono: boolean = true
   ): Promise<Array<PerpTradeActivity>> {
     const response = await axios.get(
       this.MANGO_DATA_API + '/v4/stats/perp-trade-history',
       {
         params: {
           'mango-account': mangoAccount,
-          limit: limit,
-          skip: skip,
+          limit,
+          offset,
+          'rev-chrono': reverseChrono,
         },
       }
     );
@@ -34,15 +36,15 @@ export class MangoDataApi {
   async fetchPerpMarketHistory(
     perpMarketAccount: string,
     limit: number = 100,
-    skip: number = 0
+    offset: number = 0
   ): Promise<Array<PerpTradeActivity>> {
     const response = await axios.get(
       this.MANGO_DATA_API + '/v4/stats/perp-market-history',
       {
         params: {
           'perp-market': perpMarketAccount,
-          limit: limit,
-          skip: skip,
+          limit,
+          offset,
         },
       }
     );
@@ -51,8 +53,7 @@ export class MangoDataApi {
 
   async fetchFundingAccountHourly(
     mangoAccount: string,
-    limit: number = 100,
-    skip: number = 0
+    startDate?: string
   ): Promise<Record<string, Record<string, AccountFunding>>> {
     const response: AxiosResponse<Record<string, Record<string, any>>> =
       await axios.get(
@@ -60,8 +61,7 @@ export class MangoDataApi {
         {
           params: {
             'mango-account': mangoAccount,
-            limit: limit,
-            skip: skip,
+            'start-date': startDate,
           },
         }
       );
@@ -69,17 +69,13 @@ export class MangoDataApi {
   }
 
   async fetchOneHourFundingRate(
-    mangoGroup: string,
-    limit: number = 100,
-    skip: number = 0
+    mangoGroup: string
   ): Promise<Array<OneHourFundingRate>> {
     const response = await axios.get(
       this.MANGO_DATA_API + '/v4/one-hour-funding-rate',
       {
         params: {
           'mango-group': mangoGroup,
-          limit: limit,
-          skip: skip,
         },
       }
     );
@@ -88,8 +84,9 @@ export class MangoDataApi {
 
   async fetchTradeHistory(
     mangoAccount: string,
-    limit: number = 100,
-    skip: number = 0
+    limit: number = 10000,
+    offset: number = 0,
+    reverseChrono: boolean = true
   ): Promise<TradeHistory[]> {
     const response = await axios.get(
       this.MANGO_DATA_API + '/v4/stats/trade-history',
@@ -97,7 +94,8 @@ export class MangoDataApi {
         params: {
           'mango-account': mangoAccount,
           limit: limit,
-          skip: skip,
+          offset,
+          'rev-chrono': reverseChrono,
         },
       }
     );

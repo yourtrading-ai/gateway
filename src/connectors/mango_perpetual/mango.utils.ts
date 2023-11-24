@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import { OrderType, Side } from '../../amm/amm.requests';
 import { PerpOrderSide, PerpOrderType } from '@blockworks-foundation/mango-v4';
 import ws from 'ws';
@@ -22,7 +21,7 @@ export function translateOrderType(type: OrderType) {
       return PerpOrderType.market;
     case 'IOC':
       return PerpOrderType.immediateOrCancel;
-    case 'POST_ONLY':
+    case 'LIMIT_MAKER':
       return PerpOrderType.postOnly;
     default:
       throw new Error('Invalid order type');
@@ -44,6 +43,7 @@ export enum OrderStatus {
 }
 
 export type FillEntry = {
+  id: string;
   price: number;
   quantity: number;
   fee: number;
@@ -61,7 +61,6 @@ export type OrderTrackingInfo = {
   feeToken?: string;
   createdAt: number;
   updatedAt: number;
-  seqNum?: BN;
 };
 
 export class OrderTracker {
@@ -101,27 +100,28 @@ export class OrderTracker {
   public updateOrderStatus(
     clientOrderId: string,
     status: OrderStatus,
-    fillentry?: FillEntry,
-    seqNum?: BN
+    fillentry?: FillEntry
   ) {
     const trackingInfo = this.clientOrderIdToTrackingInfo.get(clientOrderId);
     if (trackingInfo) {
       trackingInfo.status = status;
 
       if (fillentry) {
-        trackingInfo.fills.push(fillentry);
+        // push new entry then remove duplicates through id in each entry
+        trackingInfo.fills = [...trackingInfo.fills, fillentry].filter(
+          (fill, index, self) =>
+            index === self.findIndex((f) => f.id === fill.id)
+        );
       }
 
       trackingInfo.updatedAt = Date.now();
-      if (seqNum) trackingInfo.seqNum = seqNum;
     }
   }
 
   public updateOrderStatusByExchangeOrderId(
     exchangeOrderId: string,
     status: OrderStatus,
-    fillentry?: FillEntry,
-    seqNum?: BN
+    fillentry?: FillEntry
   ) {
     const trackingInfo = Array.from(
       this.clientOrderIdToTrackingInfo.values()
@@ -130,12 +130,14 @@ export class OrderTracker {
       trackingInfo.status = status;
 
       if (fillentry) {
-        trackingInfo.fills.push(fillentry);
+        // push new entry then remove duplicates through id in each entry
+        trackingInfo.fills = [...trackingInfo.fills, fillentry].filter(
+          (fill, index, self) =>
+            index === self.findIndex((f) => f.id === fill.id)
+        );
       }
 
       trackingInfo.updatedAt = Date.now();
-
-      if (seqNum) trackingInfo.seqNum = seqNum;
     }
   }
 
@@ -187,21 +189,6 @@ export class OrderTracker {
     return Array.from(this.clientOrderIdToTrackingInfo.values()).filter(
       (info) => info.status !== OrderStatus.CANCELLED
     );
-  }
-
-  public getEarlisestSeqNumForOpenOrders() {
-    const openOrders = this.getOpenOrderTrackingInfo();
-    if (openOrders.length === 0) {
-      return undefined;
-    }
-
-    return openOrders.reduce((prev, curr) => {
-      if (curr.seqNum && prev && curr.seqNum.lt(prev)) {
-        return curr.seqNum;
-      }
-
-      return prev;
-    }, openOrders[0].seqNum);
   }
 }
 
@@ -284,6 +271,8 @@ class ReconnectingWebsocketFeed {
         '[MangoFeed] did not receive ping in time -> terminate and reconnect'
       );
       this._socket.terminate();
+      this._socket = new ws(this._url);
+      this._connect();
     }, 30000 + 1000);
   }
 
@@ -309,6 +298,7 @@ class ReconnectingWebsocketFeed {
       setTimeout(() => {
         if (!this._reconnectionAttemptsExhausted()) {
           this._reconnectionAttempts++;
+          this._socket = new ws(this._url);
           this._connect();
         }
       }, this._reconnectionIntervalMs);
@@ -433,10 +423,6 @@ export class FillsFeed extends ReconnectingWebsocketFeed {
         command: 'subscribe',
         ...subscriptions,
       });
-      console.log(
-        '🪧 -> file: mango.utils.ts:419 -> FillsFeed -> subscribe -> payload:',
-        payload
-      );
       this._socket.send(payload);
     } else {
       console.warn(

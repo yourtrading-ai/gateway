@@ -83,7 +83,7 @@ type IdentifiablePostOrdersIxs = {
   identifiers: OrderIdentifier[];
 };
 
-const RECONNECT_INTERVAL_MS = 300;
+const RECONNECT_INTERVAL_MS = 500;
 const RECONNECT_ATTEMPTS_MAX = 10;
 const WS_API_URL = 'wss://api.mngo.cloud/fills/v1/';
 
@@ -138,6 +138,7 @@ export class MangoClobPerp {
     // @note: Mango allows for groups that include a selection of markets in one cross-margin basket,
     //        but we are only supporting one group per Gateway instance for now. You can change the
     //        group in the config file (mango.defaultGroup)
+    await group.reloadAll(this._client);
     const derivativeMarkets = await this._client.perpGetMarkets(group);
     for (const market of derivativeMarkets) {
       const key = market.name;
@@ -255,6 +256,14 @@ export class MangoClobPerp {
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       // console.log('Found account: ', foundAccount!.name);
+
+      // Begin listening to fills feed
+      this.subscribeToFillsFeed(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        foundAccount!,
+        this.parsedMarkets[market].publicKey.toString()
+      );
+
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return foundAccount!;
     }
@@ -330,6 +339,13 @@ export class MangoClobPerp {
     if (index > -1) {
       this._accountInProcess.splice(index, 1);
     }
+
+    // Begin listening to fills feed
+    this.subscribeToFillsFeed(
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      newAccount,
+      this.parsedMarkets[market].publicKey.toString()
+    );
 
     return newAccount;
   }
@@ -440,6 +456,8 @@ export class MangoClobPerp {
     const makerFee = fill.event.makerFee;
     const takerFee = fill.event.takerFee;
     const timestamp = Date.parse(fill.event.timestamp);
+    const slot = fill.slot;
+    const seqNum = fill.event.seqNum;
 
     let isMaker: boolean;
     let trackingInfo: OrderTrackingInfo | undefined;
@@ -463,6 +481,7 @@ export class MangoClobPerp {
 
     // Update tracking info
     const fillEntry = {
+      id: `${slot}-${seqNum}`,
       price: fillPrice,
       quantity: fillAmount,
       fee: isMaker ? makerFee : takerFee,
@@ -537,8 +556,8 @@ export class MangoClobPerp {
     const market = this.parsedMarkets[req.market];
 
     // @note: use getL2Ui to get the correct price levels
-    const bids = (await market.loadBids(this._client)).getL2Ui(10);
-    const asks = (await market.loadAsks(this._client)).getL2Ui(10);
+    const bids = (await market.loadBids(this._client, true)).getL2Ui(10);
+    const asks = (await market.loadAsks(this._client, true)).getL2Ui(10);
 
     // @note: currently all timestamp are the same
     const currentTime = Date.now();
@@ -606,7 +625,8 @@ export class MangoClobPerp {
     );
 
     const trades = await this.derivativeApi.fetchPerpTradeHistory(
-      mangoAccount.publicKey.toBase58()
+      mangoAccount.publicKey.toBase58(),
+      100
     );
 
     let targetTrade = undefined;
@@ -615,8 +635,7 @@ export class MangoClobPerp {
       for (const trade of trades) {
         if (
           trade.taker_client_order_id === req.orderId ||
-          trade.taker_order_id === req.orderId ||
-          trade.maker_order_id === req.orderId
+          trade.maker_client_order_id === req.orderId
         ) {
           targetTrade = trade;
           break;
@@ -692,25 +711,33 @@ export class MangoClobPerp {
       this.parsedMarkets[req.market].perpMarketIndex,
       true
     );
-    // console.log(
-    //   '🪧 -> file: mango.perp.ts:555 -> MangoClobPerp -> loadPerpOpenOrdersForMarket:',
-    //   orders
-    // );
 
     for (const order of orders) {
       this.processOrderUpdate(order);
     }
 
-    if (req.orderId !== undefined) {
-      this.processTargetedOrderUpdate(orders, req.orderId, undefined);
-    } else if (req.clientOrderId !== undefined) {
-      this.processTargetedOrderUpdate(orders, undefined, req.clientOrderId);
-    }
+    this.processTargetedOrderUpdate(orders, req.orderId, req.clientOrderId);
 
-    // console.log(
-    //   '🪧 -> file: mango.perp.ts:429 -> MangoClobPerp -> processOrderUpdate:',
-    //   this._orderTracker.getAllOrderTrackingInfo()
-    // );
+    const mappedTrackingInfo = this._orderTracker
+      .getAllOrderTrackingInfo()
+      .map((info) => {
+        return {
+          clientOrderId:
+            info.clientOrderId === req.clientOrderId
+              ? `${info.clientOrderId} <- Requested`
+              : info.clientOrderId,
+          exchangeOrderId: info.exchangeOrderId,
+          status: info.status,
+          side: info.side,
+        };
+      })
+      .filter((info) => {
+        return info.status !== OrderStatus.CANCELLED;
+      });
+    console.log(
+      '🪧 -> file: mango.perp.ts:746 -> MangoClobPerp -> processOrderUpdate:',
+      mappedTrackingInfo
+    );
 
     // TODO: dummyOrder is a hack to return the order info if it is not tracked
     const dummyOrder: OrderTrackingInfo = {
@@ -733,10 +760,6 @@ export class MangoClobPerp {
         dummyOrder.exchangeOrderId = req.orderId;
         return [dummyOrder];
       } else {
-        // console.log(
-        //   '🪧 -> file: mango.perp.ts:593 -> MangoClobPerp -> targetOrder:',
-        //   targetOrder
-        // );
         return [targetOrder];
       }
 
@@ -751,10 +774,6 @@ export class MangoClobPerp {
         dummyOrder.exchangeOrderId = req.orderId;
         return [dummyOrder];
       } else {
-        // console.log(
-        //   '🪧 -> file: mango.perp.ts:611 -> MangoClobPerp -> targetOrder:',
-        //   targetOrder
-        // );
         return [targetOrder];
       }
 
@@ -771,7 +790,7 @@ export class MangoClobPerp {
   ) {
     let targetOrder = undefined;
 
-    if (exchangeOrderId !== undefined) {
+    if (exchangeOrderId !== undefined && exchangeOrderId.length > 0) {
       targetOrder =
         this._orderTracker.getOrderTrackingInfoByExchangeOrderId(
           exchangeOrderId
@@ -875,6 +894,77 @@ export class MangoClobPerp {
     };
   }
 
+  private async checkIfOrderAreFilled(
+    address: string,
+    market: string,
+    clientOrderId: string
+  ) {
+    // Wait for 500ms to make sure order is processed
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const mangoAccount = await this.getOrCreateMangoAccount(address, market);
+    const trades = await this.derivativeApi.fetchPerpTradeHistory(
+      mangoAccount.publicKey.toBase58(),
+      20
+    );
+
+    const foundTrades = trades.filter(
+      (trade) =>
+        trade.maker_client_order_id === clientOrderId ||
+        trade.taker_client_order_id === clientOrderId
+    );
+    console.log(
+      '🪧 -> file: mango.perp.ts:919 -> MangoClobPerp -> foundTrades:',
+      foundTrades
+    );
+
+    for (const trade of foundTrades) {
+      const fillEntry = {
+        id: `${trade.slot}-${trade.seq_num}`,
+        price: trade.price,
+        quantity: trade.quantity,
+        fee:
+          trade.maker_client_order_id === clientOrderId
+            ? trade.maker_fee
+            : trade.taker_fee,
+        timestamp: Date.parse(trade.block_datetime),
+      };
+
+      this._orderTracker.updateOrderStatus(
+        clientOrderId,
+        OrderStatus.PARTIALLY_FILLED,
+        fillEntry
+      );
+    }
+
+    const trackingInfo = this._orderTracker.getOrderTrackingInfo(clientOrderId);
+
+    if (trackingInfo !== undefined) {
+      // Sum up fill amounts in currentFills
+      const currentFillAmount = trackingInfo.fills.reduce(
+        (acc, fill) => acc + fill.quantity,
+        0
+      );
+
+      // Check if current fill amount is equal or greater than order amount
+      if (currentFillAmount >= trackingInfo.orderAmount) {
+        this._orderTracker.updateOrderStatus(
+          trackingInfo.clientOrderId,
+          OrderStatus.FILLED
+        );
+      } else if (currentFillAmount > 0) {
+        this._orderTracker.updateOrderStatus(
+          trackingInfo.clientOrderId,
+          OrderStatus.PARTIALLY_FILLED
+        );
+      }
+    } else {
+      throw Error(
+        `checkIfOrderAreFilled: Order client id: ${trackingInfo} not found`
+      );
+    }
+  }
+
   public async postOrder(req: PerpClobPostOrderRequest): Promise<{
     txHash: string;
     clientOrderId?: string | string[];
@@ -894,6 +984,12 @@ export class MangoClobPerp {
     }
 
     const result = await this.orderUpdate(req);
+    await this.checkIfOrderAreFilled(
+      req.address,
+      req.market,
+      req.clientOrderId
+    );
+
     return this.mapClientOrderIDs(result);
   }
 
@@ -901,7 +997,7 @@ export class MangoClobPerp {
     txHash: string;
     clientOrderId?: string | string[];
   }> {
-    const order = this._orderTracker.getOrderTrackingInfoByExchangeOrderId(
+    let order = this._orderTracker.getOrderTrackingInfoByExchangeOrderId(
       req.orderId
     );
 
@@ -909,9 +1005,19 @@ export class MangoClobPerp {
       throw Error('deleteOrder: Order not found');
     }
 
+    await this.checkIfOrderAreFilled(
+      req.address,
+      req.market,
+      order.clientOrderId
+    );
+
+    order = this._orderTracker.getOrderTrackingInfoByExchangeOrderId(
+      req.orderId
+    );
+
     if (
-      order.status === OrderStatus.OPEN ||
-      order.status === OrderStatus.PARTIALLY_FILLED
+      order!.status === OrderStatus.OPEN ||
+      order!.status === OrderStatus.PARTIALLY_FILLED
     ) {
       this._orderTracker.updateOrderStatusByExchangeOrderId(
         req.orderId,
@@ -1043,7 +1149,7 @@ export class MangoClobPerp {
   ) {
     let positions: PerpPosition[] = [];
     let marketIndexesToQuery = marketIndexes;
-    await this.mangoGroup.reloadPerpMarkets(this._client);
+    // await this.mangoGroup.reloadPerpMarkets(this._client);
     await this.loadMarkets(this.mangoGroup);
 
     if (marketIndexes.length === 0) {
@@ -1234,6 +1340,7 @@ export class MangoClobPerp {
   }> {
     // TODO: Find out how much Compute Units each instruction type uses and batch them in one or multiple transactions
     // TODO: Transfer funds to MangoAccount if necessary
+    // TODO: This only work with one order per request, need to refactor to work with multiple orders
     const walletProvider = await this.getProvider(req.address);
     const addressKeyPair = await this._chain.getKeypair(req.address);
     this._tempClient = this.connectMangoClient(addressKeyPair);
@@ -1270,12 +1377,6 @@ export class MangoClobPerp {
         perpOrdersToCreate[0].market
       );
 
-      // Begin listening to fills feed
-      this.subscribeToFillsFeed(
-        mangoAccount,
-        this.parsedMarkets[perpOrdersToCreate[0].market].publicKey.toString()
-      );
-
       // TODO: this only works if there is only one order in the payload
       const orders = await mangoAccount.loadPerpOpenOrdersForMarket(
         this._client,
@@ -1301,11 +1402,25 @@ export class MangoClobPerp {
             this._orderTracker.updateOrderStatus(
               identifier.clientOrderId.toString(),
               OrderStatus.OPEN,
-              undefined,
-              order.seqNum
+              undefined
             );
           }
         }
+      }
+
+      if (identifiedOrders.length === 0) {
+        for (const identifier of payload.identifiers) {
+          identifiedOrders.push({
+            clientOrderId: identifier.clientOrderId.toString(),
+            exchangeOrderId: `99999${identifier.clientOrderId.toString()}`,
+          });
+
+          this._orderTracker.updateOrderExchangeOrderId(
+            identifier.clientOrderId.toString(),
+            `99999${identifier.clientOrderId.toString()}`
+          );
+        }
+        console.warn('Cant find any orders after submitting');
       }
 
       return { txHash: txSignature.signature, identifiedOrders };
