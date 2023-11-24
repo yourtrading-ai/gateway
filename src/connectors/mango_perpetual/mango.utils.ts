@@ -217,11 +217,9 @@ function isStatusMessage(obj: any): obj is StatusMessage {
   return obj.success !== undefined;
 }
 
-const WebSocket = global.WebSocket || ws;
-
 class ReconnectingWebsocketFeed {
   private _url: string;
-  protected _socket: WebSocket;
+  protected _socket: ws;
   private _connected: boolean;
   protected _reconnectionIntervalMs: number;
   protected _reconnectionMaxAttempts: number;
@@ -233,6 +231,7 @@ class ReconnectingWebsocketFeed {
     | null = null;
   private _onStatus: ((update: StatusMessage) => void) | null = null;
   private _onMessage: ((data: any) => void) | null = null;
+  private _pingTimeout: any;
 
   constructor(
     url: string,
@@ -240,7 +239,7 @@ class ReconnectingWebsocketFeed {
     reconnectionMaxAttempts?: number
   ) {
     this._url = url;
-    this._socket = new WebSocket(this._url);
+    this._socket = new ws(this._url);
     this._reconnectionIntervalMs = reconnectionIntervalMs ?? 5000;
     this._reconnectionMaxAttempts = reconnectionMaxAttempts ?? -1;
     this._reconnectionAttempts = 0;
@@ -276,6 +275,16 @@ class ReconnectingWebsocketFeed {
 
   protected onMessage(callback: (data: any) => void) {
     this._onMessage = callback;
+  }
+
+  private heartbeat() {
+    clearTimeout(this._pingTimeout);
+    this._pingTimeout = setTimeout(() => {
+      console.log(
+        '[MangoFeed] did not receive ping in time -> terminate and reconnect'
+      );
+      this._socket.terminate();
+    }, 30000 + 1000);
   }
 
   private _connect() {
@@ -318,6 +327,12 @@ class ReconnectingWebsocketFeed {
       } catch (err) {
         console.warn('[MangoFeed] error deserializing message', err);
       }
+    });
+
+    this._socket.on('ping', () => {
+      console.log('[MangoFeed] received ping');
+      this.heartbeat();
+      this._socket.pong();
     });
   }
 

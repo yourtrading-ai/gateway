@@ -232,7 +232,7 @@ export class MangoClobPerp {
     this._accountInProcess.push(`${address}-${market}`);
 
     // Phase 1: Check if account already exists
-    console.log('Checking if account already exists...');
+    // console.log('Checking if account already exists...');
     let foundAccount = this.getExistingMangoAccount(address, market);
     if (foundAccount) {
       isReadyToReturn = true;
@@ -707,10 +707,10 @@ export class MangoClobPerp {
       this.processTargetedOrderUpdate(orders, undefined, req.clientOrderId);
     }
 
-    console.log(
-      '🪧 -> file: mango.perp.ts:429 -> MangoClobPerp -> processOrderUpdate:',
-      this._orderTracker.getAllOrderTrackingInfo()
-    );
+    // console.log(
+    //   '🪧 -> file: mango.perp.ts:429 -> MangoClobPerp -> processOrderUpdate:',
+    //   this._orderTracker.getAllOrderTrackingInfo()
+    // );
 
     // TODO: dummyOrder is a hack to return the order info if it is not tracked
     const dummyOrder: OrderTrackingInfo = {
@@ -733,10 +733,10 @@ export class MangoClobPerp {
         dummyOrder.exchangeOrderId = req.orderId;
         return [dummyOrder];
       } else {
-        console.log(
-          '🪧 -> file: mango.perp.ts:593 -> MangoClobPerp -> targetOrder:',
-          targetOrder
-        );
+        // console.log(
+        //   '🪧 -> file: mango.perp.ts:593 -> MangoClobPerp -> targetOrder:',
+        //   targetOrder
+        // );
         return [targetOrder];
       }
 
@@ -751,10 +751,10 @@ export class MangoClobPerp {
         dummyOrder.exchangeOrderId = req.orderId;
         return [dummyOrder];
       } else {
-        console.log(
-          '🪧 -> file: mango.perp.ts:611 -> MangoClobPerp -> targetOrder:',
-          targetOrder
-        );
+        // console.log(
+        //   '🪧 -> file: mango.perp.ts:611 -> MangoClobPerp -> targetOrder:',
+        //   targetOrder
+        // );
         return [targetOrder];
       }
 
