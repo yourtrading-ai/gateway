@@ -21,36 +21,32 @@ export enum TradeDirection {
   Ask = 'ask',
 }
 
-/**
- *  {
- * 		"signature": "KgEmDkMsxLDWTkDfNyv8XUW97JuVjd37AqnCEJTGdtyfqWdLxotpTheWto1L6Abqoq9g12LcJYhrzn7PSojpSj4",
- * 		"slot": 192997392,
- * 		"block_datetime": "2023-05-09T15:17:57.000Z",
- * 		"maker": "9XJt2tvSZghsMAhWto1VuPBrwXsiimPtsTR8XwGgDxK2",
- * 		"maker_order_id": null,
- * 		"maker_fee": -0.0003000000142492354,
- * 		"taker": "FMa8WDGoZwgJGe2paiDVGnEsBkpuNv3eeycZyQUy9YgB",
- * 		"taker_order_id": null,
- * 		"taker_client_order_id": "1683645465395",
- * 		"taker_fee": 0.0006000000284984708,
- * 		"taker_side": "bid",
- * 		"perp_market": "HwhVGkfsSQ9JSQeQYu2CbkRCLvsh3qRZxG6m4oMVwZpN",
- * 		"market_index": 0,
- * 		"price": 27545.6,
- * 		"quantity": 0.0089,
- * 		"seq_num": 322203,
- * 		"perp_market_name": "BTC-PERP"
- * 	},
- */
+// {
+//   "signature": "1aWi9VGVQZ7pPmKjdabBMXubuQiH9zS4cGfYrG1qBJMGtua1VGRjsmYjvroVTqPomzM58ZtUjnoVTGxVZQYgfdf",
+//   "slot": 231912750,
+//   "block_datetime": "2023-11-24T07:14:31.000Z",
+//   "maker": "BLgb4NFwhpurMrGX5LQfb8D8dBpGSGtBqqew2Em8uyRT",
+//   "maker_client_order_id": "1700810065794702",
+//   "maker_fee": -0.0003000000142492354,
+//   "taker": "CYo6Sc6cMpzbHzVnvoLAdt8ZpNif9PAJaJG9ymVEv6Gz",
+//   "taker_client_order_id": "1700810053082",
+//   "taker_fee": 0.0006000000284984708,
+//   "taker_side": "bid",
+//   "perp_market": "ESdnpnNLgTkBCZRuTJkZLi5wKEZ2z47SG3PJrhundSQ2",
+//   "market_index": 2,
+//   "price": 57.05,
+//   "quantity": 0.05,
+//   "seq_num": 2135893,
+//   "perp_market_name": "SOL-PERP"
+// },
 export type PerpTradeActivity = {
   signature: string;
   slot: number;
   block_datetime: string;
   maker: string;
-  maker_order_id: string | null;
+  maker_client_order_id: string;
   maker_fee: number;
   taker: string;
-  taker_order_id: string | null;
   taker_client_order_id: string;
   taker_fee: number;
   taker_side: TradeDirection;
