@@ -908,6 +908,14 @@ export class MangoClobPerp {
       20
     );
 
+    if (trades === undefined) {
+      return;
+    }
+
+    if (trades.filter === undefined) {
+      return;
+    }
+
     const foundTrades = trades.filter(
       (trade) =>
         trade.maker_client_order_id === clientOrderId ||
