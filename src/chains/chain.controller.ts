@@ -1,3 +1,5 @@
+import { Decimal } from 'decimal.js-light';
+
 import { latency } from '../services/base';
 
 import { Chain } from '../services/common-interfaces';
@@ -6,6 +8,10 @@ import {
   TransferRequest,
   TransferResponse,
 } from '../services/common-interfaces';
+import {
+  Connector,
+  ConnectorWithBalances,
+} from '../services/connection-manager';
 
 import {
   BalanceRequest,

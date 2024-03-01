@@ -55,7 +55,7 @@ export type ChainUnion =
   | Xdcish
   | Tezosish
   | XRPLish
-  | Kujir
+  | Kujira
   | Solana;
 
 export type Chain<T> = T extends Algorand
