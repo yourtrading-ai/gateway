@@ -52,6 +52,7 @@ export class SolanaController {
     const initTime = Date.now();
     let wallet: Keypair;
     try {
+      console.log('🪧 -> SolanaController -> address:', req.address);
       wallet = await solanaish.getKeypair(req.address);
     } catch (err) {
       throw new HttpException(
@@ -62,8 +63,10 @@ export class SolanaController {
     }
 
     const balances = await solanaish.getBalances(wallet);
+    console.log('🪧 -> SolanaController -> balances:', balances);
 
     const filteredBalances = toSolanaBalances(balances, req.tokenSymbols);
+    console.log('🪧 -> SolanaController -> filteredBalances:', filteredBalances);
     // console.log(
     //   '🪧 -> file: solana.controllers.ts:65 -> SolanaController -> filteredBalances:',
     //   filteredBalances

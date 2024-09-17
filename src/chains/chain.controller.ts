@@ -99,26 +99,10 @@ export async function allowances(
 
 export async function balances(
   chain: Chain,
-  req: BalanceRequest,
-  connector: Connector<ConnectorWithBalances> | undefined
+  req: BalanceRequest
 ): Promise<BalanceResponse | string> {
   const initTime = Date.now();
   const balances = await chain.controller.balances(chain, req);
-
-  if (connector?.balances !== undefined) {
-    const connectorBalances = await connector.balances(req);
-    for (const key of Object.keys(connectorBalances)) {
-      if (balances['balances'][key] === undefined) {
-        balances['balances'][key] = connectorBalances[key];
-      } else {
-        balances['balances'][key] = new Decimal(balances['balances'][key])
-          .add(new Decimal(connectorBalances[key]))
-          .toString();
-      }
-    }
-  }
-
-  console.log('🪧 -> file: chain.controller.ts:123 -> balances:', balances);
 
   return {
     network: chain.chain,

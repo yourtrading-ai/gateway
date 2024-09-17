@@ -692,6 +692,8 @@ export class MangoClobPerp {
     for (const [key, value] of balancesMap.entries()) {
       balances[key] = value;
     }
+    console.log('🪧 -> MangoClobPerp -> balances -> balances:', balances);
+    
     return balances;
   }
 

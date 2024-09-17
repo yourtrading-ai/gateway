@@ -16,12 +16,7 @@ import {
 } from '../chains/ethereum/ethereum.validators';
 import { validateNonceRequest } from './ethereum/ethereum.validators';
 
-import {
-  getInitializedChain,
-  getConnector,
-  Connector,
-  ConnectorWithBalances,
-} from '../services/connection-manager';
+import { getInitializedChain } from '../services/connection-manager';
 import {
   AllowancesRequest,
   AllowancesResponse,
@@ -100,14 +95,8 @@ export namespace ChainRoutes {
           req.body.chain,
           req.body.network
         );
-        if (req.body.connector === undefined) {
-          res.status(200).json(await balances(chain, req.body, undefined));
-        } else {
-          const connector = await getConnector<
-            Connector<ConnectorWithBalances>
-          >(req.body.chain, req.body.network, req.body.connector);
-          res.status(200).json(await balances(chain, req.body, connector));
-        }
+
+        res.status(200).json(await balances(chain, req.body));
       }
     )
   );
