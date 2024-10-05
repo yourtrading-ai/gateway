@@ -35,6 +35,8 @@ import { Curve } from '../connectors/curve/curve';
 import { PancakeswapLP } from '../connectors/pancakeswap/pancakeswap.lp';
 import { Carbonamm } from '../connectors/carbon/carbonAMM';
 import { Balancer } from '../connectors/balancer/balancer';
+import { Solana } from '../chains/solana/solana';
+import { MangoClobPerp } from '../connectors/mango_perpetual/mango.perp';
 
 export type ChainUnion =
   | Algorand
@@ -42,7 +44,8 @@ export type ChainUnion =
   | Ethereumish
   | Xdcish
   | Tezosish
-  | Osmosis;
+  | Osmosis
+  | Solana;
 
 export type Chain<T> = T extends Algorand
   ? Algorand
@@ -56,7 +59,8 @@ export type Chain<T> = T extends Algorand
               ? Tezosish
                 : T extends Osmosis
                   ? Osmosis
-                  : never;
+                  : T extends Solana
+                  ? Solana : never;
 
 export class UnsupportedChainException extends Error {
   constructor(message?: string) {
@@ -119,6 +123,8 @@ export async function getChainInstance(
     connection = Tezos.getInstance(network);
   } else if (chain === 'telos') {
     connection = Telos.getInstance(network);
+  } else if (chain === 'solana') {
+    connection = Solana.getInstance(network) 
   } else {
     connection = undefined;
   }
@@ -132,6 +138,7 @@ export type ConnectorUnion =
   | Tinyman
   | Plenty
   | Curve
+  | MangoClobPerp;
 
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
@@ -141,6 +148,8 @@ export type Connector<T> = T extends Uniswapish
         ? Tinyman
           : T extends Plenty
             ? Plenty
+              : T extends MangoClobPerp
+              ? MangoClobPerp
               : never;
 
 export async function getConnector<T>(
@@ -184,6 +193,8 @@ export async function getConnector<T>(
     connectorInstance = Tinyman.getInstance(network);
   } else if (connector === 'plenty') {
     connectorInstance = Plenty.getInstance(network);
+  } else if (chain === 'solana' && connector === 'mango_perpetual') {
+    connectorInstance = MangoClobPerp.getInstance(chain, network) 
   } else {
     throw new Error('unsupported chain or connector');
   }

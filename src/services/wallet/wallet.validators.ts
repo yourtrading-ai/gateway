@@ -6,6 +6,8 @@ import {
   mkSelectingValidator,
 } from '../validators';
 
+import { validateSolPrivateKey as isSolPrivateKey } from '../../chains/solana/solana.validators';
+
 const { fromBase64 } = require('@cosmjs/encoding');
 
 export const invalidAlgorandPrivateKeyOrMnemonicError: string =
@@ -19,6 +21,9 @@ export const invalidCosmosPrivateKeyError: string =
 
 export const invalidTezosPrivateKeyError: string =
   'The privateKey param is not a valid Tezos private key.';
+
+export const invalidSolPrivateKeyError: string =
+  'The privateKey param is not a valid Solana private key.';
 
 export const isAlgorandPrivateKeyOrMnemonic = (str: string): boolean => {
   const parts = str.split(' ');
@@ -90,7 +95,7 @@ export const validatePrivateKey: Validator = mkSelectingValidator(
     celo: mkValidator(
       'privateKey',
       invalidEthPrivateKeyError,
-      (val) => typeof val === 'string' && isEthPrivateKey(val)
+      (val) => typeof val === 'string' && isEthPrivateKey(val),
     ),
     osmosis: mkValidator(
       'privateKey',
@@ -122,11 +127,16 @@ export const validatePrivateKey: Validator = mkSelectingValidator(
       invalidEthPrivateKeyError,
       (val) => typeof val === 'string' && isEthPrivateKey(val),
     ),
+    solana: mkValidator(
+      'privateKey',
+      invalidSolPrivateKeyError,
+      (val) => typeof val === 'string' && isSolPrivateKey(val),
+    ),
   },
 );
 
 export const invalidChainError: string =
-  'chain must be "ethereum", "avalanche", "harmony", "cosmos", "osmosis", "binance-smart-chain", or "kujira"';
+  'chain must be "ethereum", "avalanche", "harmony", "cosmos", "osmosis", "binance-smart-chain", or "solana"';
 
 export const invalidNetworkError: string =
   'expected a string for the network key';
@@ -155,7 +165,8 @@ export const validateChain: Validator = mkValidator(
       val === 'osmosis' ||
       val === 'binance-smart-chain' ||
       val === 'tezos' ||
-      val === 'telos'),
+      val === 'telos' ||
+      val === 'solana'),
 );
 
 export const validateNetwork: Validator = mkValidator(
