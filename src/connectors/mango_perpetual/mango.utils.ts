@@ -3,6 +3,7 @@ import { PerpOrderSide, PerpOrderType } from '@blockworks-foundation/mango-v4';
 import ws from 'ws';
 import * as path from 'path';
 import * as fs from 'fs';
+import appRoot from 'app-root-path';
 
 export function translateOrderSide(side: Side) {
   switch (side) {
@@ -68,9 +69,10 @@ export type OrderTrackingInfo = {
 export class OrderTracker {
   private clientOrderIdToTrackingInfo: Map<string, OrderTrackingInfo> =
     new Map();
+  private readonly dbPath = [appRoot.path, 'db'].join('/');
   private readonly storageFilePath = path.join(
-    __dirname,
-    'orderTrackingInfo.json',
+    this.dbPath,
+    '/orderTrackingInfo.json',
   );
 
   constructor() {

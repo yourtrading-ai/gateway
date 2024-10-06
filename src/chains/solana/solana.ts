@@ -142,7 +142,7 @@ export class Solana implements Solanaish {
     const tokens: TokenInfo[] =
       await new CustomStaticTokenListResolutionStrategy(
         this._config.network.tokenListSource,
-        this._config.network.tokenListType
+        this._config.network.tokenListType,
       ).resolve();
 
     const tokenListContainer = new TokenListContainer(tokens);
@@ -194,7 +194,7 @@ export class Solana implements Solanaish {
    */
   async findAssociatedTokenAddress(
     walletAddress: PublicKey,
-    tokenMintAddress: PublicKey
+    tokenMintAddress: PublicKey,
   ): Promise<PublicKey> {
     const tokenProgramId = this._tokenProgramAddress;
     const splAssociatedTokenAccountProgramId = (
@@ -206,7 +206,7 @@ export class Solana implements Solanaish {
           {
             programId: this._tokenProgramAddress,
           },
-        ]
+        ],
       )
     ).value.map((item) => item.pubkey)[0];
 
@@ -230,7 +230,7 @@ export class Solana implements Solanaish {
 
       const encryptedPrivateKey: string = await fse.readFile(
         `${path}/${address}.json`,
-        'utf8'
+        'utf8',
       );
 
       const passphrase = ConfigManagerCertPassphrase.readPassphrase();
@@ -288,13 +288,13 @@ export class Solana implements Solanaish {
     balances['UNWRAPPED_SOL'] = await runWithRetryAndTimeout(
       this,
       this.getSolBalance,
-      [wallet]
+      [wallet],
     );
 
     const allSplTokens = await runWithRetryAndTimeout(
       this.connection,
       this.connection.getParsedTokenAccountsByOwner,
-      [wallet.publicKey, { programId: this._tokenProgramAddress }]
+      [wallet.publicKey, { programId: this._tokenProgramAddress }],
     );
 
     allSplTokens.value.forEach(
@@ -306,9 +306,9 @@ export class Solana implements Solanaish {
         const symbol = this.getTokenForMintAddress(tokenInfo['mint'])?.symbol;
         if (symbol != null)
           balances[symbol] = this.tokenResponseToTokenValue(
-            tokenInfo['tokenAmount']
+            tokenInfo['tokenAmount'],
           );
-      }
+      },
     );
 
     let allSolBalance = BigNumber.from(0);
@@ -336,7 +336,7 @@ export class Solana implements Solanaish {
 
     balances = Object.keys(balances)
       .sort((key1: string, key2: string) =>
-        key1.toUpperCase().localeCompare(key2.toUpperCase())
+        key1.toUpperCase().localeCompare(key2.toUpperCase()),
       )
       .reduce((target: Record<string, TokenValue>, key) => {
         target[key] = balances[key];
@@ -352,7 +352,7 @@ export class Solana implements Solanaish {
     const lamports = await runWithRetryAndTimeout(
       this.connection,
       this.connection.getBalance,
-      [wallet.publicKey]
+      [wallet.publicKey],
     );
     return { value: BigNumber.from(lamports), decimals: this._lamportDecimals };
   }
@@ -367,30 +367,30 @@ export class Solana implements Solanaish {
   // returns the balance for an SPL token
   public async getSplBalance(
     walletAddress: PublicKey,
-    mintAddress: PublicKey
+    mintAddress: PublicKey,
   ): Promise<TokenValue> {
     const response = await runWithRetryAndTimeout(
       this.connection,
       this.connection.getParsedTokenAccountsByOwner,
-      [walletAddress, { mint: mintAddress }]
+      [walletAddress, { mint: mintAddress }],
     );
     if (response['value'].length == 0) {
       throw new Error(`Token account not initialized`);
     }
     return this.tokenResponseToTokenValue(
-      response.value[0].account.data.parsed['info']['tokenAmount']
+      response.value[0].account.data.parsed['info']['tokenAmount'],
     );
   }
 
   // returns whether the token account is initialized, given its mint address
   async isTokenAccountInitialized(
     walletAddress: PublicKey,
-    mintAddress: PublicKey
+    mintAddress: PublicKey,
   ): Promise<boolean> {
     const response = await runWithRetryAndTimeout(
       this.connection,
       this.connection.getParsedTokenAccountsByOwner,
-      [walletAddress, { programId: this._tokenProgramAddress }]
+      [walletAddress, { programId: this._tokenProgramAddress }],
     );
     for (const accountInfo of response.value) {
       if (
@@ -405,7 +405,7 @@ export class Solana implements Solanaish {
   // returns token account if is initialized, given its mint address
   public async getTokenAccount(
     walletAddress: PublicKey,
-    mintAddress: PublicKey
+    mintAddress: PublicKey,
   ): Promise<{
     pubkey: PublicKey;
     account: AccountInfo<ParsedAccountData>;
@@ -413,7 +413,7 @@ export class Solana implements Solanaish {
     const response = await runWithRetryAndTimeout(
       this.connection,
       this.connection.getParsedTokenAccountsByOwner,
-      [walletAddress, { programId: this._tokenProgramAddress }]
+      [walletAddress, { programId: this._tokenProgramAddress }],
     );
     for (const accountInfo of response.value) {
       if (
@@ -429,19 +429,19 @@ export class Solana implements Solanaish {
   // if needed, which costs 0.035 SOL
   async getOrCreateAssociatedTokenAccount(
     wallet: Keypair,
-    tokenAddress: PublicKey
+    tokenAddress: PublicKey,
   ): Promise<TokenAccount | null> {
     return getOrCreateAssociatedTokenAccount(
       this._connection,
       wallet,
       tokenAddress,
-      wallet.publicKey
+      wallet.publicKey,
     );
   }
 
   // returns an ethereum TransactionResponse for a txHash.
   async getTransaction(
-    payerSignature: string
+    payerSignature: string,
   ): Promise<VersionedTransactionResponse | null> {
     const fetchedTx = runWithRetryAndTimeout(
       this._connection,
@@ -451,7 +451,7 @@ export class Solana implements Solanaish {
         {
           commitment: 'confirmed',
         },
-      ]
+      ],
     );
 
     return fetchedTx;
@@ -459,7 +459,7 @@ export class Solana implements Solanaish {
 
   // returns an ethereum TransactionResponseStatusCode for a txData.
   public async getTransactionStatusCode(
-    txData: TransactionResponse | null
+    txData: TransactionResponse | null,
   ): Promise<TransactionResponseStatusCode> {
     let txStatus;
     if (!txData) {
@@ -480,7 +480,7 @@ export class Solana implements Solanaish {
   public getTokenBySymbol(tokenSymbol: string): TokenInfo | undefined {
     return this.tokenList.find(
       (token: TokenInfo) =>
-        token.symbol.toUpperCase() === tokenSymbol.toUpperCase()
+        token.symbol.toUpperCase() === tokenSymbol.toUpperCase(),
     );
   }
 
@@ -489,7 +489,7 @@ export class Solana implements Solanaish {
     return await runWithRetryAndTimeout(
       this._connection,
       this._connection.getSlot,
-      []
+      [],
     );
   }
 
@@ -502,7 +502,7 @@ export class Solana implements Solanaish {
       this.requestCount +
         ' request(s) sent in last ' +
         this.metricsLogInterval / 1000 +
-        ' seconds.'
+        ' seconds.',
     );
     this._requestCount = 0; // reset
   }
@@ -528,7 +528,7 @@ export class Solana implements Solanaish {
     return await runWithRetryAndTimeout(
       this.connection,
       this.connection.getSlot,
-      ['processed']
+      ['processed'],
     );
   }
 
