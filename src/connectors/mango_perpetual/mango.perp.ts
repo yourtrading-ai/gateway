@@ -210,144 +210,36 @@ export class MangoClobPerp {
   }
 
   /**
-   * Accepts a user's public key and a market name as used inside Mango (BTC-PERP, MNGO-PERP, ...)
-   * This method makes sure that all existent accounts are being fetched, the first time a user is looking for his
-   * MangoAccounts. Each combination of user address and market name have their own MangoAccount in order to realize
-   * isolated margin-style positions.
+   * Retrieves a MangoAccount for a given user's public key and market name.
+   * If the account is not already fetched, it will attempt to fetch all existing accounts for the user.
+   * Each user address has its own MangoAccount named "robotter".
+   * Once the account is found, it subscribes to the fills feed for real-time updates.
    */
-  private async getOrCreateMangoAccount(
+  public async getMangoAccount(
     address: string,
-    market: string,
+    market?: string,
   ): Promise<MangoAccount> {
-    let isReadyToReturn = false;
-
-    // Check if account is already in process, if yes then wait for it to finish
-    while (this._accountInProcess.includes(`${address}-${market}`)) {
-      console.log(
-        `Account finding for ${address}-${market} in process, waiting...`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    }
-
-    // Add account to in-process list to prevent duplicate account creation
-    this._accountInProcess.push(`${address}-${market}`);
-
-    // Phase 1: Check if account already exists
-    // console.log('Checking if account already exists...');
-    let foundAccount = this.getExistingMangoAccount(address, market);
-    if (foundAccount) {
-      isReadyToReturn = true;
-    }
+    const defaultAccount = 'robotter';
+    let foundAccount = this.getExistingMangoAccount(address, defaultAccount);
 
     // check if user has been initialized and accounts fetched
-    if (!isReadyToReturn && this.mangoAccounts[address] === undefined) {
-      foundAccount = await this.fetchExistingAccounts(address, market);
-      if (foundAccount) {
-        isReadyToReturn = true;
+    if (!foundAccount && this.mangoAccounts[address] === undefined) {
+      foundAccount = await this.fetchExistingAccounts(address, defaultAccount);
+    }
+
+    if (foundAccount) {
+      // Begin listening to fills feed only if market is not undefined
+      if (market) {
+        this.subscribeToFillsFeed(
+          foundAccount,
+          this.parsedMarkets[market].publicKey.toString(),
+        );
       }
+
+      return foundAccount;
+    } else {
+      throw new Error('Mango account not found');
     }
-
-    if (isReadyToReturn) {
-      // Find and remove account from in-process list
-      const index = this._accountInProcess.indexOf(`${address}-${market}`);
-      if (index > -1) {
-        this._accountInProcess.splice(index, 1);
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      // console.log('Found account: ', foundAccount!.name);
-
-      // Begin listening to fills feed
-      this.subscribeToFillsFeed(
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        foundAccount!,
-        this.parsedMarkets[market].publicKey.toString(),
-      );
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      return foundAccount!;
-    }
-
-    // Phase 2: No existing account found -> Create new account
-    // get accounts and find accountNumber to use to create new MangoAccount
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const accounts = Object.values(this.mangoAccounts[address]!).filter(
-      (account) => {
-        return account !== undefined;
-      },
-    ) as MangoAccount[];
-    const usedIndexes = accounts.map((account) => account.accountNum).sort();
-    const accountNumber = usedIndexes.length > 0 ? max(usedIndexes) + 1 : 0;
-    const addressKeyPair = await this._chain.getKeypair(address);
-
-    if (addressKeyPair === undefined) {
-      throw Error(
-        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address}\nInvalid KeyPair?`,
-      );
-    }
-
-    // @todo: Check if there is account space optimization possible with tokenCount
-    try {
-      // Add timeout to automatically remove account in process, let it run for at least 5 seconds
-      setTimeout(() => {
-        const index = this._accountInProcess.indexOf(`${address}-${market}`);
-        if (index > -1) {
-          this._accountInProcess.splice(index, 1);
-          console.error(
-            `Account creation timeout reached, but account was not removed from in-process list: ${address}-${market}`,
-          );
-        } else {
-          console.error(
-            `Account creation timeout reached, but account was already removed from in-process list: ${address}-${market}`,
-          );
-        }
-      }, 5000);
-
-      this._tempClient = this.connectMangoClient(addressKeyPair);
-      // console.log('Creating account: ', accountNumber, market);
-      await this._tempClient.createMangoAccount(
-        this.mangoGroup,
-        accountNumber,
-        market,
-        2,
-      );
-    } catch (error) {
-      throw Error(
-        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup.publicKey.toString()} for wallet ${address}\nError: ${error}`,
-      );
-    }
-
-    const updatedAccounts = await this._client.getMangoAccountsForOwner(
-      this.mangoGroup,
-      new PublicKey(address),
-    );
-
-    const newAccount = updatedAccounts.find(
-      (account) => account.accountNum === accountNumber,
-    );
-
-    if (newAccount === undefined)
-      throw Error(
-        `MangoAccount creation failure: ${market} - in group ${this.mangoGroup} for wallet ${address}\nDo you have enough SOL?`,
-      );
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    this.mangoAccounts[address]![market] = newAccount;
-
-    // Find and remove account from in-process list
-    const index = this._accountInProcess.indexOf(`${address}-${market}`);
-    if (index > -1) {
-      this._accountInProcess.splice(index, 1);
-    }
-
-    // Begin listening to fills feed
-    this.subscribeToFillsFeed(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      newAccount,
-      this.parsedMarkets[market].publicKey.toString(),
-    );
-
-    return newAccount;
   }
 
   private async fetchExistingAccounts(
@@ -619,10 +511,7 @@ export class MangoClobPerp {
   public async trades(
     req: PerpClobGetTradesRequest,
   ): Promise<Array<PerpTradeActivity>> {
-    const mangoAccount = await this.getOrCreateMangoAccount(
-      req.address,
-      req.market,
-    );
+    const mangoAccount = await this.getMangoAccount(req.address, req.market);
 
     const trades = await this.derivativeApi.fetchPerpTradeHistory(
       mangoAccount.publicKey.toBase58(),
@@ -700,10 +589,7 @@ export class MangoClobPerp {
   public async orders(
     req: PerpClobGetOrderRequest,
   ): Promise<Array<OrderTrackingInfo>> {
-    const mangoAccount = await this.getOrCreateMangoAccount(
-      req.address,
-      req.market,
-    );
+    const mangoAccount = await this.getMangoAccount(req.address, req.market);
 
     await mangoAccount.reload(this._client);
 
@@ -904,7 +790,7 @@ export class MangoClobPerp {
     // Wait for 500ms to make sure order is processed
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const mangoAccount = await this.getOrCreateMangoAccount(address, market);
+    const mangoAccount = await this.getMangoAccount(address, market);
     const trades = await this.derivativeApi.fetchPerpTradeHistory(
       mangoAccount.publicKey.toBase58(),
       20,
@@ -1100,10 +986,7 @@ export class MangoClobPerp {
   public async fundingPayments(
     req: PerpClobFundingPaymentsRequest,
   ): Promise<Array<FundingPayment>> {
-    const mangoAccount = await this.getOrCreateMangoAccount(
-      req.address,
-      req.market,
-    );
+    const mangoAccount = await this.getMangoAccount(req.address, req.market);
 
     // @note: take too long to fetch all funding payments
     const response = await this.derivativeApi.fetchFundingAccountHourly(
@@ -1239,7 +1122,7 @@ export class MangoClobPerp {
     const identifiers: OrderIdentifier[] = [];
     const missingCollateral = new Map<string, I80F48>();
     for (const order of orders) {
-      const mangoAccount = await this.getOrCreateMangoAccount(
+      const mangoAccount = await this.getMangoAccount(
         provider.wallet.publicKey.toBase58(),
         order.market,
       );
@@ -1287,7 +1170,7 @@ export class MangoClobPerp {
     }
 
     for (const [market, amount] of missingCollateral.entries()) {
-      const mangoAccount = await this.getOrCreateMangoAccount(
+      const mangoAccount = await this.getMangoAccount(
         provider.wallet.publicKey.toBase58(),
         market,
       );
@@ -1322,7 +1205,7 @@ export class MangoClobPerp {
   ): Promise<TransactionInstruction[]> {
     const perpOrdersToCancel = [];
     for (const order of orders) {
-      const mangoAccount = await this.getOrCreateMangoAccount(
+      const mangoAccount = await this.getMangoAccount(
         provider.wallet.publicKey.toBase58(),
         order.market,
       );
@@ -1381,7 +1264,7 @@ export class MangoClobPerp {
         },
       );
 
-      const mangoAccount = await this.getOrCreateMangoAccount(
+      const mangoAccount = await this.getMangoAccount(
         req.address,
         perpOrdersToCreate[0].market,
       );

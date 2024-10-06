@@ -16,6 +16,7 @@ import { SwaggerManager } from './services/swagger-manager';
 import { ConnectorsRoutes } from './connectors/connectors.routes';
 import { AmmRoutes, AmmLiquidityRoutes } from './amm/amm.routes';
 import { CLOBRoutes, PerpClobRoutes } from './clob/clob.routes';
+import { MangoRoutes } from './mango/mango.routes';
 
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
@@ -52,6 +53,8 @@ gatewayApp.use('/wallet', WalletRoutes.router);
 
 gatewayApp.use('/clob', CLOBRoutes.router);
 gatewayApp.use('/clob/perp', PerpClobRoutes.router);
+
+gatewayApp.use('/mango', MangoRoutes.router);
 
 // a simple route to test that the server is running
 gatewayApp.get('/', (_req: Request, res: Response) => {
