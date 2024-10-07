@@ -1,5 +1,5 @@
 # Set the base image
-FROM node:21.1.0
+FROM node:20.14.0
 
 # WORKDIR /usr/src/app/
 WORKDIR /home/gateway
@@ -8,18 +8,18 @@ WORKDIR /home/gateway
 COPY . .
 
 # Dockerfile author / maintainer
-LABEL maintainer="Michael Feng <mike@hummingbot.org>"
+# LABEL maintainer="Michael Feng <mike@hummingbot.org>"
 
-# Build arguments
-LABEL branch=${BRANCH}
-LABEL commit=${COMMIT}
-LABEL date=${BUILD_DATE}
+# # Build arguments
+# LABEL branch=${BRANCH}
+# LABEL commit=${COMMIT}
+# LABEL date=${BUILD_DATE}
 
-# Set ENV variables
-ENV COMMIT_BRANCH=${BRANCH}
-ENV COMMIT_SHA=${COMMIT}
-ENV BUILD_DATE=${DATE}
-ENV INSTALLATION_TYPE=docker
+# # Set ENV variables
+# ENV COMMIT_BRANCH=${BRANCH}
+# ENV COMMIT_SHA=${COMMIT}
+# ENV BUILD_DATE=${DATE}
+# ENV INSTALLATION_TYPE=docker
 
 # Create mount points
 RUN mkdir -p /home/gateway/conf /home/gateway/logs /home/gateway/db /home/gateway/certs

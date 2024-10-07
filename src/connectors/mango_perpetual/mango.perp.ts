@@ -63,7 +63,6 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { mangoDataApi, MangoDataApi } from './mango.api';
-import { max } from 'mathjs';
 import Dict = NodeJS.Dict;
 import { BalanceRequest } from '../../network/network.requests';
 import Decimal from 'decimal.js-light';
@@ -99,7 +98,6 @@ export class MangoClobPerp {
 
   private _ready: boolean = false;
   private _tempClient: MangoClient | undefined; // TODO: manage temp client by wallet address -> make it into array of addresses MangoClient[]
-  private _accountInProcess: string[] = [];
   private _fillsFeeds = new Map<string, Map<string, FillsFeed>>(); // 1st key: mango market address, 2nd key: mango account address, value: fill feed
 
   public parsedMarkets: PerpClobMarkets<PerpMarket> = {};
