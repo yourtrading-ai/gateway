@@ -4,7 +4,12 @@ import {
   PositionInfo as LPPositionInfo,
 } from '../services/common-interfaces';
 
-export type OrderType = 'LIMIT' | 'LIMIT_MAKER';
+export type OrderType =
+  | 'LIMIT'
+  | 'LIMIT_MAKER'
+  | 'IOC'
+  | 'MARKET'
+  | 'POST_ONLY';
 export type Side = 'BUY' | 'SELL';
 
 export interface PriceRequest extends NetworkSelectionRequest {

@@ -8,6 +8,7 @@ import { Celo } from '../chains/celo/celo';
 import { Xdc } from '../chains/xdc/xdc';
 import { Tezos } from '../chains/tezos/tezos';
 import { Telos } from '../chains/telos/telos';
+import { Solana } from '../chains/solana/solana';
 import {
   HttpException,
   UNKNOWN_CHAIN_ERROR_CODE,
@@ -107,6 +108,11 @@ export async function getStatus(
     const osmosisConnections = Osmosis.getConnectedInstances();
     connections = connections.concat(
       osmosisConnections ? Object.values(osmosisConnections) : [],
+    );
+
+    const solanaConnections = Solana.getConnectedInstances();
+    connections = connections.concat(
+      solanaConnections ? Object.values(solanaConnections) : []
     );
   }
 

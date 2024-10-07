@@ -15,6 +15,8 @@ import { ConfigManagerV2 } from './services/config-manager-v2';
 import { SwaggerManager } from './services/swagger-manager';
 import { ConnectorsRoutes } from './connectors/connectors.routes';
 import { AmmRoutes, AmmLiquidityRoutes } from './amm/amm.routes';
+import { CLOBRoutes, PerpClobRoutes } from './clob/clob.routes';
+import { MangoRoutes } from './mango/mango.routes';
 
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
@@ -37,7 +39,7 @@ gatewayApp.use(
         req.originalUrl === '/' || req.originalUrl.includes('/network/status')
       );
     },
-  })
+  }),
 );
 
 // mount sub routers
@@ -48,6 +50,11 @@ gatewayApp.use('/connectors', ConnectorsRoutes.router);
 gatewayApp.use('/amm', AmmRoutes.router);
 gatewayApp.use('/amm/liquidity', AmmLiquidityRoutes.router);
 gatewayApp.use('/wallet', WalletRoutes.router);
+
+gatewayApp.use('/clob', CLOBRoutes.router);
+gatewayApp.use('/clob/perp', PerpClobRoutes.router);
+
+gatewayApp.use('/mango', MangoRoutes.router);
 
 // a simple route to test that the server is running
 gatewayApp.get('/', (_req: Request, res: Response) => {
@@ -61,7 +68,7 @@ gatewayApp.post(
     process.exit(1);
     // this is only to satisfy the compiler, it will never be called.
     res.status(200).json();
-  })
+  }),
 );
 
 // handle any error thrown in the gateway api route
@@ -70,12 +77,12 @@ gatewayApp.use(
     err: Error | NodeError | HttpException,
     _req: Request,
     res: Response,
-    _next: NextFunction
+    _next: NextFunction,
   ) => {
     const response = gatewayErrorMiddleware(err);
     logger.error(err);
     return res.status(response.httpErrorCode).json(response);
-  }
+  },
 );
 
 export const swaggerDocument = SwaggerManager.generateSwaggerJson(
@@ -88,7 +95,7 @@ export const swaggerDocument = SwaggerManager.generateSwaggerJson(
     './docs/swagger/amm-routes.yml',
     './docs/swagger/amm-liquidity-routes.yml',
     './docs/swagger/chain-routes.yml',
-  ]
+  ],
 );
 
 export const startSwagger = async () => {
@@ -96,7 +103,7 @@ export const startSwagger = async () => {
   const swaggerPort = 8080;
 
   logger.info(
-    `⚡️ Swagger listening on port ${swaggerPort}. Read the Gateway API documentation at 127.0.0.1:${swaggerPort}`
+    `⚡️ Swagger listening on port ${swaggerPort}. Read the Gateway API documentation at 127.0.0.1:${swaggerPort}`,
   );
 
   swaggerApp.use('/', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -106,11 +113,11 @@ export const startSwagger = async () => {
 
 export const startGateway = async () => {
   const port = ConfigManagerV2.getInstance().get('server.port');
-  const gateway_version="dev-2.0.2"
+  const gateway_version = 'dev-2.0.2';
   if (!ConfigManagerV2.getInstance().get('server.id')) {
     ConfigManagerV2.getInstance().set(
       'server.id',
-      Math.random().toString(16).substr(2, 14)
+      Math.random().toString(16).substr(2, 14),
     );
   }
   logger.info(`Gateway Version: ${gateway_version}`); // display gateway version
@@ -124,7 +131,7 @@ export const startGateway = async () => {
       logger.info('The gateway server is secured behind HTTPS.');
     } catch (e) {
       logger.error(
-        `Failed to start the server with https. Confirm that the SSL certificate files exist and are correct. Error: ${e}`
+        `Failed to start the server with https. Confirm that the SSL certificate files exist and are correct. Error: ${e}`,
       );
       process.exit();
     }

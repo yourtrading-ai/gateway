@@ -19,6 +19,7 @@ import { PlentyConfig } from './plenty/plenty.config';
 import { OsmosisConfig } from '../chains/osmosis/osmosis.config';
 import { CarbonConfig } from './carbon/carbon.config';
 import { BalancerConfig } from './balancer/balancer.config';
+import { MangoConfig } from './mango_perpetual/mango.config';
 
 export namespace ConnectorsRoutes {
   export const router = Router();
@@ -139,6 +140,12 @@ export namespace ConnectorsRoutes {
             trading_type: BalancerConfig.config.tradingTypes,
             chain_type: BalancerConfig.config.chainType,
             available_networks: BalancerConfig.config.availableNetworks,
+          },
+          {
+            name: 'mango_perpetual',
+            trading_type: MangoConfig.config.tradingTypes('perp'),
+            chain_type: MangoConfig.config.chainType,
+            available_networks: MangoConfig.config.availableNetworks,
           },
         ],
       });
