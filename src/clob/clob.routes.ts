@@ -367,6 +367,7 @@ export namespace PerpClobRoutes {
         req: Request<{}, {}, PerpClobGetTradesRequest>,
         res: Response<PerpClobGetTradesResponse | string, {}>
       ) => {
+        console.log('🪧 -> file: clob.routes.ts:371 -> body:', req.body);
         validatePerpTradesRequest(req.body);
         res
           .status(200)

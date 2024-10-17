@@ -1,15 +1,17 @@
 import {
   DerivativeTrade,
   FundingPayment,
-  Orderbook,
-  PerpetualMarket,
-  Position,
+  PriceLevel,
 } from '@injectivelabs/sdk-ts';
 import { NetworkSelectionRequest } from '../services/common-interfaces';
 
 export type OrderType = 'LIMIT' | 'LIMIT_MAKER' | 'MARKET';
 export type Side = 'BUY' | 'SELL';
 
+export interface Orderbook<T = PriceLevel[]> {
+  buys: T;
+  sells: T;
+}
 export interface ClobMarketsRequest extends NetworkSelectionRequest {
   market?: string;
 }
@@ -64,7 +66,7 @@ export interface CreateOrderParam {
   orderType: OrderType;
   side: Side;
   market: string;
-  clientOrderID?: string;
+  clientOrderId?: string;
 }
 
 export interface ClobPostOrderRequest
@@ -89,7 +91,7 @@ export interface ClobPostOrderResponse {
   timestamp: number;
   latency: number;
   txHash: string;
-  clientOrderID?: string | string[];
+  clientOrderId?: string | string[];
 }
 
 export type ClobDeleteOrderRequest = ClobGetOrderRequest & { address: string };
@@ -100,8 +102,8 @@ export type ClobDeleteOrderResponse = ClobPostOrderResponse;
 
 export type PerpClobMarketRequest = ClobMarketsRequest;
 
-export interface PerpClobMarkets {
-  [key: string]: PerpetualMarket;
+export interface PerpClobMarkets<T = any> {
+  [key: string]: T;
 }
 
 export interface PerpClobMarketResponse {
@@ -123,6 +125,7 @@ export interface PerpClobGetOrderRequest extends NetworkSelectionRequest {
   market: string;
   address: string;
   orderId?: string;
+  clientOrderId?: string;
   direction?: string; // 'buy', 'sell', 'long', 'short'
   orderTypes?: string; // string like 'buy,sell,stop_buy,stop_sell,take_buy,take_sell,buy_po,sell_po'
   limit?: number; // 1 or greater, otherwise it gets all orders
@@ -148,6 +151,7 @@ export interface CreatePerpOrderParam {
   side: Side;
   market: string;
   leverage: number;
+  clientOrderId?: string;
 }
 
 export interface PerpClobPostOrderRequest
@@ -173,6 +177,44 @@ export interface PerpClobBatchUpdateRequest extends NetworkSelectionRequest {
 }
 
 export type PerpClobBatchUpdateResponse = ClobPostOrderResponse;
+
+export function extractPerpOrderParams(
+  req:
+    | PerpClobDeleteOrderRequest
+    | PerpClobPostOrderRequest
+    | PerpClobBatchUpdateRequest
+): {
+  perpOrdersToCreate: CreatePerpOrderParam[];
+  perpOrdersToCancel: ClobDeleteOrderRequestExtract[];
+} {
+  let perpOrdersToCreate: CreatePerpOrderParam[] = [];
+  let perpOrdersToCancel: ClobDeleteOrderRequestExtract[] = [];
+  if ('createOrderParams' in req)
+    perpOrdersToCreate = perpOrdersToCreate.concat(
+      req.createOrderParams as CreatePerpOrderParam[]
+    );
+  if ('price' in req)
+    perpOrdersToCreate.push({
+      price: req.price,
+      amount: req.amount,
+      orderType: req.orderType,
+      side: req.side,
+      market: req.market,
+      leverage: req.leverage,
+      clientOrderId: req.clientOrderId,
+    });
+  if ('cancelOrderParams' in req)
+    perpOrdersToCancel = perpOrdersToCancel.concat(
+      req.cancelOrderParams as ClobDeleteOrderRequestExtract[]
+    );
+  if ('orderId' in req)
+    perpOrdersToCancel.push({
+      orderId: req.orderId,
+      market: req.market,
+    });
+
+  return { perpOrdersToCreate, perpOrdersToCancel };
+}
 
 export interface PerpClobFundingInfoRequest extends NetworkSelectionRequest {
   market: string;
@@ -211,11 +253,11 @@ export interface PerpClobGetTradesRequest extends NetworkSelectionRequest {
   orderId: string;
 }
 
-export interface PerpClobGetTradesResponse {
+export interface PerpClobGetTradesResponse<T = DerivativeTrade> {
   network: string;
   timestamp: number;
   latency: number;
-  trades: Array<DerivativeTrade>;
+  trades: Array<T>;
 }
 
 export interface PerpClobFundingPaymentsRequest
@@ -224,11 +266,11 @@ export interface PerpClobFundingPaymentsRequest
   market: string;
 }
 
-export interface PerpClobFundingPaymentsResponse {
+export interface PerpClobFundingPaymentsResponse<T = FundingPayment> {
   network: string;
   timestamp: number;
   latency: number;
-  fundingPayments: Array<FundingPayment>;
+  fundingPayments: Array<T>;
 }
 
 export interface PerpClobPositionRequest extends NetworkSelectionRequest {
@@ -240,5 +282,11 @@ export interface PerpClobPositionResponse {
   network: string;
   timestamp: number;
   latency: number;
-  positions: Array<Position>;
+  positions:
+    | [
+        {
+          [key: string]: string;
+        }
+      ]
+    | [];
 }
