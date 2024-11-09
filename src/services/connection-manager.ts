@@ -38,6 +38,7 @@ import { Balancer } from '../connectors/balancer/balancer';
 import { ETCSwapLP } from '../connectors/etcswap/etcswap.lp';
 import { EthereumClassicChain } from '../chains/ethereum-classic/ethereum-classic';
 import { ETCSwap } from '../connectors/etcswap/etcswap';
+import { Polkadot } from '../chains/polkadot/polkadot';
 
 export type ChainUnion =
   | Algorand
@@ -45,21 +46,24 @@ export type ChainUnion =
   | Ethereumish
   | Xdcish
   | Tezosish
-  | Osmosis;
+  | Osmosis
+  | Polkadot;
 
 export type Chain<T> = T extends Algorand
   ? Algorand
   : T extends Cosmos
-    ? Cosmos
-    : T extends Ethereumish
-      ? Ethereumish
-        : T extends Xdcish
-          ? Xdcish
-            : T extends Tezosish
-              ? Tezosish
-                : T extends Osmosis
-                  ? Osmosis
-                  : never;
+  ? Cosmos
+  : T extends Ethereumish
+  ? Ethereumish
+  : T extends Xdcish
+  ? Xdcish
+  : T extends Tezosish
+  ? Tezosish
+  : T extends Osmosis
+  ? Osmosis
+  : T extends Polkadot
+  ? Polkadot
+  : never;
 
 export class UnsupportedChainException extends Error {
   constructor(message?: string) {
@@ -75,7 +79,7 @@ export class UnsupportedChainException extends Error {
 
 export async function getInitializedChain<T>(
   chain: string,
-  network: string,
+  network: string
 ): Promise<Chain<T>> {
   const chainInstance = await getChainInstance(chain, network);
 
@@ -92,7 +96,7 @@ export async function getInitializedChain<T>(
 
 export async function getChainInstance(
   chain: string,
-  network: string,
+  network: string
 ): Promise<ChainUnion | undefined> {
   let connection: ChainUnion | undefined;
 
@@ -124,6 +128,8 @@ export async function getChainInstance(
     connection = Telos.getInstance(network);
   } else if (chain === 'ethereum-classic') {
     connection = EthereumClassicChain.getInstance(network);
+  } else if (chain === 'polkadot') {
+    connection = Polkadot.getInstance(network);
   } else {
     connection = undefined;
   }
@@ -136,22 +142,22 @@ export type ConnectorUnion =
   | UniswapLPish
   | Tinyman
   | Plenty
-  | Curve
+  | Curve;
 
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
   : T extends UniswapLPish
-    ? UniswapLPish
-      : T extends Tinyman
-        ? Tinyman
-          : T extends Plenty
-            ? Plenty
-              : never;
+  ? UniswapLPish
+  : T extends Tinyman
+  ? Tinyman
+  : T extends Plenty
+  ? Plenty
+  : never;
 
 export async function getConnector<T>(
   chain: string,
   network: string,
-  connector: string | undefined,
+  connector: string | undefined
 ): Promise<Connector<T>> {
   let connectorInstance: ConnectorUnion;
 

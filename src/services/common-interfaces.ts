@@ -594,3 +594,14 @@ export interface FullTransferResponse {
   gasWanted: string;
   txHash: string;
 }
+export interface Polkadotish {
+  init(): Promise<void>;
+  ready(): boolean;
+  getBalances(wallet: any): Promise<Record<string, TokenValue>>;
+  getTransaction(hash: string): Promise<any>;
+  getCurrentBlockNumber(): Promise<number>;
+  getTokenForSymbol(symbol: string): Token | null;
+  getWallet(address: string): Promise<any>;
+  requestCounter(msg: any): void;
+  close(): Promise<void>;
+}
