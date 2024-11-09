@@ -1,6 +1,6 @@
 import { Polkadot } from './polkadot';
 import { PolkadotBalanceRequest, PolkadotPollRequest } from './polkadot.requests';
-import { TokenValue, tokenValueToString } from '../../services/base';
+import { tokenValueToString } from '../../services/base';
 import {
   HttpException,
   TOKEN_NOT_SUPPORTED_ERROR_CODE,
@@ -10,9 +10,10 @@ import {
   validatePolkadotBalanceRequest,
   validatePolkadotPollRequest,
 } from './polkadot.validators';
+import { PolkadotTokenValue } from './polkadot-base';
 
 export const toPolkadotBalances = (
-  balances: Record<string, TokenValue>,
+  balances: Record<string, PolkadotTokenValue>,
   tokenSymbols: Array<string>
 ): Record<string, string> => {
   const walletBalances: Record<string, string> = {};

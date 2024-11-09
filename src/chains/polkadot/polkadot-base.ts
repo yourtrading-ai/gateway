@@ -43,6 +43,26 @@ export interface EncryptedPrivateKey {
   ciphertext: Uint8Array;
 }
 
+export class PolkadotAsset implements Token {
+  decimals: number = 0;
+  constructor(asset: Token) {
+    this.decimals = asset.decimals;
+    this.base = asset.base;
+    this.address = asset.address;
+    this.name = asset.name;
+    this.symbol = asset.symbol;
+  }
+  base: string;
+  address: string;
+  name: string;
+  symbol: string;
+}
+
+export interface PolkadotTokenValue {
+  value: BigNumber;
+  decimals: number;
+}
+
 export class PolkadotBase {
   private _provider: ApiPromise;
   protected tokenList: Token[] = [];
@@ -252,7 +272,7 @@ export class PolkadotBase {
 
   async getBalances(wallet: KeyringPair): Promise<Record<string, TokenValue>> {
     const balances: Record<string, TokenValue> = {};
-    const { data: { free: balance } } = await this._provider.query.system.account(wallet.address);
+    const balance = await this._provider.query.system.account(wallet.address);
     
     // Native token balance
     balances[this.getTokenForSymbol('DOT')?.symbol || 'DOT'] = {
@@ -270,7 +290,7 @@ export class PolkadotBase {
             token.address
           );
           balances[token.symbol] = {
-            value: BigNumber.from(tokenBalance.data.free.toString()),
+            value: BigNumber.from(tokenBalance.toString()),
             decimals: token.decimals,
           };
         } catch (e) {

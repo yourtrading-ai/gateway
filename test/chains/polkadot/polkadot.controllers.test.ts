@@ -1,6 +1,7 @@
 import { PolkadotController } from '../../../src/chains/polkadot/polkadot.controllers';
 import { Polkadot } from '../../../src/chains/polkadot/polkadot';
 import { jest } from '@jest/globals';
+import { TokenValue } from '../../../src/services/base';
 
 describe('PolkadotController', () => {
   let polkadot: Polkadot;
@@ -24,7 +25,7 @@ describe('PolkadotController', () => {
         DOT: { value: '1000000000000', decimals: 10 }
       };
 
-      jest.spyOn(polkadot, 'getBalances').mockResolvedValue(mockBalances);
+      jest.spyOn(polkadot, 'getBalances').mockResolvedValue(mockBalances as Record<string, TokenValue>);
 
       const response = await PolkadotController.balances(polkadot, mockRequest);
       expect(response).toHaveProperty('balances');

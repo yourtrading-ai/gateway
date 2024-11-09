@@ -1,5 +1,4 @@
 import { Polkadot } from '../../../src/chains/polkadot/polkadot';
-import { ApiPromise } from '@polkadot/api';
 import { jest } from '@jest/globals';
 
 jest.mock('@polkadot/api');
