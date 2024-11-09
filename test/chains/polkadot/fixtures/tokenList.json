@@ -1,0 +1,18 @@
+{
+    "tokens": [
+      {
+        "base": "polkadot",
+        "address": "0x0000000000000000000000000000000000000000",
+        "name": "Polkadot",
+        "symbol": "DOT",
+        "decimals": 10
+      },
+      {
+        "base": "polkadot",
+        "address": "0x0000000000000000000000000000000000000001",
+        "name": "Kusama",
+        "symbol": "KSM",
+        "decimals": 12
+      }
+    ]
+  }

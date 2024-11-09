@@ -270,7 +270,7 @@ export class PolkadotBase {
             token.address
           );
           balances[token.symbol] = {
-            value: BigNumber.from(tokenBalance.free.toString()),
+            value: BigNumber.from(tokenBalance.data.free.toString()),
             decimals: token.decimals,
           };
         } catch (e) {

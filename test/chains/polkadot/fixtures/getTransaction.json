@@ -1,0 +1,33 @@
+{
+    "block": {
+      "header": {
+        "number": 1000000,
+        "stateRoot": "0x1234567890abcdef",
+        "extrinsicsRoot": "0xabcdef1234567890",
+        "parentHash": "0x0987654321fedcba",
+        "digest": {
+          "logs": []
+        }
+      },
+      "extrinsics": []
+    },
+    "events": [
+      {
+        "phase": {
+          "ApplyExtrinsic": 1
+        },
+        "event": {
+          "index": "0x0001",
+          "data": [
+            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+            "1000000000000"
+          ]
+        }
+      }
+    ],
+    "hash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "status": {
+      "isFinalized": true,
+      "asFinalized": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    }
+  }

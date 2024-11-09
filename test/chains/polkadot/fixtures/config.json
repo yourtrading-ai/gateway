@@ -1,0 +1,10 @@
+{
+    "network": {
+      "name": "test-network",
+      "wsURL": "ws://localhost:9944",
+      "tokenListType": "FILE",
+      "tokenListSource": "./test/chains/polkadot/fixtures/tokenList.json"
+    },
+    "nativeCurrencySymbol": "DOT",
+    "manualGasPrice": 1000
+  }

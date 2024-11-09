@@ -1,0 +1,12 @@
+{
+    "address": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+    "encoded": "encoded_key_data",
+    "encoding": {
+      "content": ["pkcs8", "sr25519"],
+      "type": ["scrypt", "xsalsa20-poly1305"],
+      "version": "3"
+    },
+    "meta": {
+      "name": "Test Wallet"
+    }
+  }

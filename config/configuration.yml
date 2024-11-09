@@ -1,9 +1,0 @@
-polkadot:
-  network: mainnet
-  networks:
-    mainnet:
-      wsURL: 'wss://rpc.polkadot.io'
-      tokenListType: 'URL'
-      tokenListSource: 'https://raw.githubusercontent.com/polkadot-js/apps/master/packages/apps-config/src/api/spec/polkadot.ts'
-  nativeCurrencySymbol: 'DOT'
-  manualGasPrice: 1000000000 
