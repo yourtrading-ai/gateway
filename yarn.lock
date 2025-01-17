@@ -1707,10 +1707,6 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@dedust/sdk@^0.8.7":
-  version "0.8.7"
-  resolved "https://registry.yarnpkg.com/@dedust/sdk/-/sdk-0.8.7.tgz#77ed0dc09f68da7184b3b9a38e9f8e0431f7b95b"
-  integrity sha512-xW7bcdIUD09t9h5iUA+jCR0qLOnjvloYXNgEJbajPmIdXrCal8R+UoLE26a/5as0h6B2DmuC4peSYMoiHDFSlg==
 
 "@ensdomains/address-encoder@^0.1.7":
   version "0.1.9"
