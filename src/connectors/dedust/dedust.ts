@@ -81,26 +81,13 @@ export class Dedust {
   }
 
   public async init() {
-    try {
-      if (!this.chain.ready()) {
-        await this.chain.init();
-      }
-      this._ready = true;
-    } catch (error) {
-      throw new InitializationError(
-        SERVICE_UNITIALIZED_ERROR_MESSAGE('Dedust'),
-        SERVICE_UNITIALIZED_ERROR_CODE,
-      );
+    if (!this.chain.ready()) {
+      await this.chain.init();
     }
+    this._ready = true;
   }
 
   public ready(): boolean {
-    if (!this._ready) {
-      throw new InitializationError(
-        SERVICE_UNITIALIZED_ERROR_MESSAGE('Dedust'),
-        SERVICE_UNITIALIZED_ERROR_CODE,
-      );
-    }
     return this._ready;
   }
 
