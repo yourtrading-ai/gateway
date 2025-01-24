@@ -140,6 +140,4 @@ configurations:
     configurationPath: stonfi.yml
     schemaPath: stonfi-schema.json
 
-  $namespace dedust:
-    configurationPath: dedust.yml
-    schemaPath: dedust-schema.json
+

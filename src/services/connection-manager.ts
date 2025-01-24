@@ -42,7 +42,6 @@ import { ETCSwap } from '../connectors/etcswap/etcswap';
 import { Jupiter } from '../connectors/jupiter/jupiter';
 import { Ton } from '../chains/ton/ton';
 import { Stonfi } from '../connectors/ston_fi/ston_fi';
-import { Dedust } from '../connectors/dedust/dedust';
 
 export type ChainUnion =
   | Algorand
@@ -154,7 +153,6 @@ export type ConnectorUnion =
   | Curve
   | Jupiter
   | Stonfi
-  | Dedust;
 
 export type Connector<T> = T extends Uniswapish
   ? Uniswapish
@@ -168,8 +166,6 @@ export type Connector<T> = T extends Uniswapish
             ? Jupiter
             : T extends Stonfi
               ? Stonfi
-              : T extends Dedust
-                ? Dedust
                 : never;
 
 export async function getConnector<T>(
@@ -221,8 +217,6 @@ export async function getConnector<T>(
     connectorInstance = ETCSwapLP.getInstance(chain, network);
   } else if (connector == 'stonfi') {
     connectorInstance = Stonfi.getInstance(network);
-  } else if (connector == 'dedust') {
-    connectorInstance = Dedust.getInstance(network);
   } else {
     throw new Error('unsupported chain or connector');
   }
