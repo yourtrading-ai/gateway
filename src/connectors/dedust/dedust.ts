@@ -43,6 +43,11 @@ import {
 import { OpenedContract } from '@ton/core';
 import { beginCell } from '@ton/core';
 
+interface AssetId {
+  blockchain: number;
+  address: string;
+}
+
 export class Dedust {
   private static _instances: LRUCache<string, Dedust>;
   private chain: Ton;
@@ -125,20 +130,26 @@ export class Dedust {
     }
 
     const amount = Number(req.amount) * <number>pow(10, baseToken.decimals);
+    
+    const baseTokenAddress =
+    //@ts-ignore
+    baseToken.symbol === 'TON' ? null : baseToken.assetId.address;
+
+    const quoteTokenAddress =
+    //@ts-ignore
+    quoteToken.symbol === 'TON' ? null : quoteToken.assetId.address;  
 
     try {
-      // Create Asset instances for the tokens
       const fromAsset =
-        baseToken.assetId === 'TON'
+        baseToken.symbol === 'TON'
           ? Asset.native()
-          : Asset.jetton(Address.parse(baseToken.assetId));
+          : Asset.jetton(Address.parse(baseTokenAddress));
 
       const toAsset =
-        quoteToken.assetId === 'TON'
+        quoteToken.symbol === 'TON'
           ? Asset.native()
-          : Asset.jetton(Address.parse(quoteToken.assetId));
+          : Asset.jetton(Address.parse(quoteTokenAddress));
 
-      // Get the pool
       let pool;
       try {
         pool = this.chain.tonClient.open(
@@ -148,34 +159,41 @@ export class Dedust {
         throw new UniswapishPriceError('Failed to get pool: ' + error);
       }
 
-      // Check if pool exists
       if ((await pool.getReadinessStatus()) !== ReadinessStatus.READY) {
         throw new UniswapishPriceError('Pool does not exist or is not ready');
       }
 
-      // Get the vault for the input token
+      function isAssetIdObject(assetId: any): assetId is AssetId {
+        return assetId && typeof assetId === 'object' && 'address' in assetId;
+      }
+      
       let vault;
       try {
-        vault =
-          baseToken.assetId === 'TON'
-            ? (this.chain.tonClient.open(
-                await this.factory.getNativeVault(),
-              ) as OpenedContract<VaultNative>)
-            : (this.chain.tonClient.open(
-                await this.factory.getJettonVault(
-                  Address.parse(baseToken.assetId),
-                ),
-              ) as OpenedContract<VaultJetton>);
+        if (baseToken.symbol === 'TON') {
+          vault = this.chain.tonClient.open(
+            await this.factory.getNativeVault()
+          ) as OpenedContract<VaultNative>;
+        } else {
+          const baseTokenAddress = isAssetIdObject(baseToken.assetId)
+            ? baseToken.assetId.address
+            : baseToken.assetId;
+      
+          if (!baseTokenAddress || typeof baseTokenAddress !== 'string') {
+            throw new Error(`Invalid base token address: ${baseTokenAddress}`);
+          }
+      
+          vault = this.chain.tonClient.open(
+            await this.factory.getJettonVault(Address.parse(baseTokenAddress))
+          ) as OpenedContract<VaultJetton>;
+        }
       } catch (error) {
-        throw new UniswapishPriceError('Failed to get vault: ' + error);
+        throw new UniswapishPriceError(`Failed to get vault: ${error.message}`);
       }
 
-      // Check if vault exists
       if ((await vault.getReadinessStatus()) !== ReadinessStatus.READY) {
         throw new UniswapishPriceError('Vault does not exist.');
       }
 
-      // Get estimated swap output
       const swapEstimate = await pool.getEstimatedSwapOut({
         assetIn: fromAsset,
         amountIn: BigInt(amount),
@@ -185,16 +203,13 @@ export class Dedust {
         Number(swapEstimate.amountOut) / Math.pow(10, quoteToken.decimals);
       const expectedPrice = expectedAmount / Number(req.amount);
 
-      // Calculate price impact
       const inputValue = Number(amount);
       const outputValue = Number(swapEstimate.amountOut);
       const tradeFeeValue = Number(swapEstimate.tradeFee);
 
-      // Price impact is the percentage of value lost in the trade
       const priceImpact =
-        ((inputValue - (outputValue + tradeFeeValue)) / inputValue) * 100;
+        100 - (((inputValue - (outputValue + tradeFeeValue)) / inputValue) * 100);
 
-      // Check if price impact is too high
       if (
         this._config.maxPriceImpact &&
         priceImpact > this._config.maxPriceImpact
