@@ -193,7 +193,7 @@ export class Stonfi {
       'base64url',
     );
 
-    return `hb-ton-stonfi-${hashBase64}`;
+    return `hb-ton-${hashBase64}`;
   }
 
   public async waitForConfirmation(walletAddress: string, queryId: string) {

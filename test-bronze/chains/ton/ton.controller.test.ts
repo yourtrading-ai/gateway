@@ -33,7 +33,7 @@ const mockBase64 = Buffer.from(JSON.stringify(payload)).toString('base64');
 
 const EXPECTED_CURRENT_BLOCK_NUMBER = 100;
 const NETWORK = 'mainnet';
-const MOCK_TX_HASH = `hb-ton-stonfi-${mockBase64}`;
+const MOCK_TX_HASH = `hb-ton-${mockBase64}`;
 console.log(MOCK_TX_HASH);
 const MOCK_ADDRESS = 'mock-address';
 const MOCK_ASSET_SYMBOL = 'TON';

@@ -590,7 +590,7 @@ describe('Ton Class', () => {
             expect(result).toEqual(mockTrace);
         });
 
-        it('should handle eventHash without "hb-ton-stonfi-" prefix', async () => {
+        it('should handle eventHash without "hb-ton-" prefix', async () => {
             const mockTrace = { some: 'traceData' };
             const mockGetTrace = jest.fn().mockResolvedValue(mockTrace);
             tonInstance.tonApiClient = {
@@ -604,7 +604,7 @@ describe('Ton Class', () => {
             expect(result).toEqual(mockTrace);
         });
 
-        it('should handle eventHash with "hb-ton-stonfi-" prefix', async () => {
+        it('should handle eventHash with "hb-ton-" prefix', async () => {
             const mockTrace = { txHash: 'resolvedTxHash' };
             const mockGetTrace = jest.fn().mockResolvedValue(mockTrace);
             const mockWaitForConfirmation = jest.fn().mockResolvedValue({ txHash: 'resolvedTxHash' });
@@ -622,7 +622,7 @@ describe('Ton Class', () => {
 
             }
 
-            const eventHash = 'hb-ton-stonfi-someEncodedQueryId';
+            const eventHash = 'hb-ton-someEncodedQueryId';
             const result = await getTransactionMock(eventHash);
 
             expect(result).toEqual(mockTrace);

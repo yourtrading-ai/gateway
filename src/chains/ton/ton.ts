@@ -4,10 +4,7 @@ import { mnemonicToPrivateKey } from '@ton/crypto';
 import { TonApiClient, Trace } from '@ton-api/client';
 import TonWeb from 'tonweb';
 import {
-  Address,
   address,
-  beginCell,
-  storeMessage,
   TonClient,
   WalletContractV1R1,
   WalletContractV1R2,
@@ -26,17 +23,21 @@ import {
   TonAsset,
 } from './ton.requests';
 import fse from 'fs-extra';
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from 'crypto';
 import { promises as fs } from 'fs';
 import { Omniston } from '@ston-fi/omniston-sdk';
 
 import { TonController } from './ton.controller';
 import { TokenListType, walletPath } from '../../services/base';
 import { ConfigManagerCertPassphrase } from '../../services/config-manager-cert-passphrase';
-import { logger } from '../../services/logger';
 import { getHttpEndpoint } from '@orbs-network/ton-access';
 import { StonApiClient } from '@ston-fi/api';
-import { Stonfi } from '../../connectors/ston_fi/ston_fi';
+import { runWithRetryAndTimeout } from './ton.utils';
 
 type AssetListType = TokenListType;
 
@@ -202,19 +203,18 @@ export class Ton {
   }
 
   async getTransaction(eventHash: string): Promise<Trace> {
-    if (eventHash.includes('hb-ton-stonfi-')) {
-      const queryId = eventHash.replace('hb-ton-stonfi-', '');
+    if (eventHash.includes('hb-ton-')) {
+      const queryId = eventHash.replace('hb-ton-', '');
       const decodedString = Buffer.from(queryId, 'base64url').toString('utf-8');
       const obj = JSON.parse(decodedString);
       obj.queryId = String(obj.queryId);
-      const stonfi = Stonfi.getInstance(this._network);
-
-      const { txHash } = await stonfi.waitForConfirmation(
+      //TODO: find txHash by queryId
+      const txHash = await this.waitForTransactionConfirmation(
         obj.walletAddress,
         obj.queryId,
       );
 
-      eventHash = txHash;
+      if (txHash['@type'] === 'Found') eventHash = txHash.txHash;
     }
 
     return await this.tonApiClient.traces.getTrace(eventHash);
@@ -224,6 +224,7 @@ export class Ton {
     mnemonic: string,
   ): Promise<{ publicKey: string; secretKey: string }> {
     const keyPair = await mnemonicToPrivateKey(mnemonic.split(' '));
+
     this.wallet = await this.getWallet(
       keyPair.publicKey.toString('base64url'),
       this.workchain,
@@ -383,55 +384,6 @@ export class Ton {
     return this._assetMap;
   }
 
-  public async waitForTransactionByMessage(
-    address: Address,
-    messageBase64: string,
-    timeout: number = 30000,
-  ): Promise<string | null> {
-    return new Promise((resolve) => {
-      const startTime = Date.now();
-      const interval = setInterval(async () => {
-        try {
-          // Check for timeout
-          if (Date.now() - startTime > timeout) {
-            clearInterval(interval);
-            resolve(null);
-            return;
-          }
-
-          const state = await this.tonClient.getContractState(address);
-          if (!state || !state.lastTransaction) {
-            return;
-          }
-
-          const transactions = await this.tonClient.getTransactions(address, {
-            limit: 1,
-            lt: state.lastTransaction.lt,
-            hash: state.lastTransaction.hash,
-          });
-
-          if (transactions.length > 0) {
-            const tx = transactions[0];
-            if (tx.inMessage) {
-              const msgCell = beginCell()
-                .store(storeMessage(tx.inMessage))
-                .endCell();
-              const inMsgHash = msgCell.hash().toString('base64');
-
-              if (inMsgHash === messageBase64) {
-                clearInterval(interval);
-                resolve(tx.hash().toString('base64'));
-                return;
-              }
-            }
-          }
-        } catch (error) {
-          logger.error(`Error while waiting for transaction: ${error}`);
-        }
-      }, 1000);
-    });
-  }
-
   public getWalletContractClassByVersion(
     version: string,
   ): WalletUnionType | undefined {
@@ -515,5 +467,50 @@ export class Ton {
     }
   }
 
+  generateUniqueHash(input: string): string {
+    return createHash('sha256').update(input).digest('hex');
+  }
+  generateQueryId(length: number, hash: string): number {
+    const max = Math.pow(10, length) - 1;
+    const min = Math.pow(10, length - 1);
 
+    const hashValue = parseInt(hash.slice(0, 5), 16);
+    return (hashValue % (max - min + 1)) + min;
+  }
+
+  async waitForTransactionConfirmation(walletAddress: string, queryId: string) {
+    return await runWithRetryAndTimeout<{
+      '@type': 'Found';
+      txHash: string;
+    }>(
+      this,
+      this.waitForTransactionHash as any,
+      [walletAddress, queryId],
+      90, // maxNumberOfRetries
+      1000, // delayBetweenRetries in milliseconds
+      90000, // timeout in milliseconds
+      'Timeout while waiting for confirmation.', // timeoutMessage
+    );
+  }
+
+  async waitForTransactionHash(ownerAddress: string, queryId: string) {
+    const { traces } = await this.tonApiClient.accounts.getAccountTraces(
+      address(ownerAddress),
+      {
+        limit: 1,
+      },
+    );
+    const traceRes = await fetch(`https://tonapi.io/v2/traces/${traces[0].id}`);
+    const trace = await traceRes.json();
+    const payload = trace.transaction.in_msg.decoded_body.payload[0];
+    const queryIdFound =
+      payload.message.message_internal.body.value.value.query_id;
+
+    if (queryId == queryIdFound)
+      return {
+        '@type': 'Found',
+        txHash: traces[0].id,
+      };
+    else throw new Error('Transaction not found');
+  }
 }

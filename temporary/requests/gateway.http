@@ -75,7 +75,7 @@ POST https://{{host}}:{{port}}/chain/poll
 Content-Type: application/json
 
 {
-  "txHash": "hb-ton-stonfi-eyJ3YWxsZXRBZGRyZXNzIjoiRVFCU2V2WUc3dUV4RTZ3Sm5XQzJhZEcyU3FjalVVcU5sbWZlVFJNRmhIVDNrVG9ZIiwicXVlcnlJZCI6MTAwMDAwMDAwMzc0MzUxfQ",
+  "txHash": "hb-ton-eyJ3YWxsZXRBZGRyZXNzIjoiRVFCU2V2WUc3dUV4RTZ3Sm5XQzJhZEcyU3FjalVVcU5sbWZlVFJNRmhIVDNrVG9ZIiwicXVlcnlJZCI6MTAwMDAwMDAwMzc0MzUxfQ",
   "chain": "ton",
   "network": "mainnet"
 }

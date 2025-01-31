@@ -20,14 +20,7 @@ import {
   SERVICE_UNITIALIZED_ERROR_MESSAGE,
   AMOUNT_LESS_THAN_MIN_AMOUNT_ERROR_MESSAGE,
 } from '../../services/error-handler';
-import { pow } from 'mathjs';
-import {
-  WalletContractV4,
-  toNano,
-  Address,
-  Sender,
-  SenderArguments,
-} from '@ton/ton';
+import { toNano, Address, Sender, SenderArguments } from '@ton/ton';
 import {
   Factory,
   MAINNET_FACTORY_ADDR,
@@ -40,7 +33,7 @@ import {
   VaultNative,
   AssetType,
 } from '@dedust/sdk';
-import { OpenedContract } from '@ton/core';
+import { OpenedContract, SendMode } from '@ton/core';
 import { beginCell } from '@ton/core';
 
 interface AssetId {
@@ -129,15 +122,15 @@ export class Dedust {
       throw new Error(AMOUNT_NOT_SUPPORTED_ERROR_MESSAGE);
     }
 
-    const amount = Number(req.amount) * <number>pow(10, baseToken.decimals);
-    
+    const amount = toNano(req.amount);
+
     const baseTokenAddress =
-    //@ts-ignore
-    baseToken.symbol === 'TON' ? null : baseToken.assetId.address;
+      //@ts-ignore
+      baseToken.symbol === 'TON' ? null : baseToken.assetId.address;
 
     const quoteTokenAddress =
-    //@ts-ignore
-    quoteToken.symbol === 'TON' ? null : quoteToken.assetId.address;  
+      //@ts-ignore
+      quoteToken.symbol === 'TON' ? null : quoteToken.assetId.address;
 
     try {
       const fromAsset =
@@ -166,24 +159,24 @@ export class Dedust {
       function isAssetIdObject(assetId: any): assetId is AssetId {
         return assetId && typeof assetId === 'object' && 'address' in assetId;
       }
-      
+
       let vault;
       try {
         if (baseToken.symbol === 'TON') {
           vault = this.chain.tonClient.open(
-            await this.factory.getNativeVault()
+            await this.factory.getNativeVault(),
           ) as OpenedContract<VaultNative>;
         } else {
           const baseTokenAddress = isAssetIdObject(baseToken.assetId)
             ? baseToken.assetId.address
             : baseToken.assetId;
-      
+
           if (!baseTokenAddress || typeof baseTokenAddress !== 'string') {
             throw new Error(`Invalid base token address: ${baseTokenAddress}`);
           }
-      
+
           vault = this.chain.tonClient.open(
-            await this.factory.getJettonVault(Address.parse(baseTokenAddress))
+            await this.factory.getJettonVault(Address.parse(baseTokenAddress)),
           ) as OpenedContract<VaultJetton>;
         }
       } catch (error) {
@@ -196,7 +189,7 @@ export class Dedust {
 
       const swapEstimate = await pool.getEstimatedSwapOut({
         assetIn: fromAsset,
-        amountIn: BigInt(amount),
+        amountIn: amount,
       });
 
       const expectedAmount =
@@ -208,21 +201,21 @@ export class Dedust {
       const tradeFeeValue = Number(swapEstimate.tradeFee);
 
       const priceImpact =
-        100 - (((inputValue - (outputValue + tradeFeeValue)) / inputValue) * 100);
+        100 - ((inputValue - (outputValue + tradeFeeValue)) / inputValue) * 100;
 
-      if (
-        this._config.maxPriceImpact &&
-        priceImpact > this._config.maxPriceImpact
-      ) {
-        throw new UniswapishPriceError(
-          `Price impact too high: ${priceImpact.toFixed(2)}% > ${this._config.maxPriceImpact}%`,
-        );
-      }
+      // if (
+      //   this._config.maxPriceImpact &&
+      //   priceImpact > this._config.maxPriceImpact
+      // ) {
+      //   throw new UniswapishPriceError(
+      //     `Price impact too high: ${priceImpact.toFixed(2)}% > ${this._config.maxPriceImpact}%`,
+      //   );
+      // }
 
       const quote: DedustConfig.DedustQuote = {
         pool,
         vault,
-        amount: toNano(amount.toString()),
+        amount,
         fromAsset,
         toAsset,
         expectedOut: swapEstimate.amountOut,
@@ -267,21 +260,25 @@ export class Dedust {
 
     try {
       const keyPar = await this.chain.getAccountFromAddress(account);
+
       if (!keyPar) {
         throw new Error('Failed to get account keys');
       }
 
-      const wallet = WalletContractV4.create({
-        workchain: this.chain.workchain,
-        publicKey: Buffer.from(keyPar.publicKey, 'utf8'),
-      });
+      const transactionHash = this.chain.generateUniqueHash(
+        `${new Date().toISOString() + quote.amount}`,
+      );
+      const queryId = this.chain.generateQueryId(15, transactionHash);
 
-      const walletContract = this.chain.tonClient.open(wallet);
+      const walletContract = this.chain.tonClient.open(this.chain.wallet);
+
       const sender: Sender = {
         address: walletContract.address,
         async send(args: SenderArguments) {
           return walletContract.sendTransfer({
             secretKey: Buffer.from(keyPar.secretKey, 'base64url'),
+            authType: 'internal',
+            sendMode: SendMode.IGNORE_ERRORS,
             messages: [
               {
                 body: args.body || beginCell().endCell(),
@@ -316,6 +313,7 @@ export class Dedust {
       if (quote.fromAsset.type === AssetType.NATIVE) {
         // Swapping TON to Jetton - use VaultNative directly
         await (quote.vault as OpenedContract<VaultNative>).sendSwap(sender, {
+          queryId,
           amount: quote.amount,
           poolAddress: quote.pool.address,
           gasAmount: toNano('0.25'),
@@ -341,6 +339,7 @@ export class Dedust {
 
         await jettonWallet.sendTransfer(sender, toNano('0.3'), {
           amount: quote.amount,
+          queryId,
           destination: quote.vault.address,
           responseAddress: sender.address,
           forwardAmount: toNano('0.25'),
@@ -358,21 +357,18 @@ export class Dedust {
       if (!sender.address) {
         throw new Error('Sender address is required');
       }
-      // TODO: This is a temporary solution, we need to find a better way to get the transaction id
-      // Best would be to get the transaction id from the response of the sendTransfer method
-      // But the SDK does not return the transaction id
-      // Either we need to modify the SDK to return the transaction id or reimplment the sendTransfer method
-      const transactions = await this.chain.tonweb.getTransactions(
-        sender.address.toString(),
-        1,
+
+      const hashObj = {
+        walletAddress: this.chain.wallet.address.toString() || account,
+        queryId: queryId,
+      };
+
+      const hashBase64 = Buffer.from(JSON.stringify(hashObj)).toString(
+        'base64url',
       );
 
-      if (!transactions || transactions.length === 0) {
-        throw new Error('No transactions found');
-      }
-
       return {
-        txId: transactions[0].transaction_id.hash,
+        txId: `hb-ton-${hashBase64}`,
         success: true,
       };
     } catch (error) {
