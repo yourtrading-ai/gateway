@@ -1,134 +1,225 @@
-import { Stonfi } from '../../../src/connectors/ston_fi/ston_fi';
-import { PriceRequest } from '../../../src/amm/amm.requests';
-import { HttpException, TOKEN_NOT_SUPPORTED_ERROR_CODE, TOKEN_NOT_SUPPORTED_ERROR_MESSAGE } from '../../../src/services/error-handler';
-import { createHash } from 'crypto';
+import {
+    AMOUNT_NOT_SUPPORTED_ERROR_MESSAGE,
+    InitializationError,
+    NETWORK_ERROR_MESSAGE,
+    SERVICE_UNITIALIZED_ERROR_CODE,
+    SERVICE_UNITIALIZED_ERROR_MESSAGE,
+    TOKEN_NOT_SUPPORTED_ERROR_MESSAGE
+} from '../../../src/services/error-handler';
+import { BigNumber } from 'ethers';
 
-jest.mock('@ston-fi/api', () => ({
-    StonApiClient: jest.fn().mockImplementation(() => ({
-        simulateSwap: jest.fn(() =>
-            Promise.resolve({
-                askAddress: 'mock-ask-address',
-                askUnits: '500',
-                offerAddress: 'mock-offer-address',
-                offerUnits: '1000',
-                swapRate: '0.5',
-                slippageTolerance: '0.01',
-            }),
-        ),
-        getWalletOperations: jest.fn(() =>
-            Promise.resolve([
-                {
-                    operation: {
-                        routerAddress: 'mock-router-address',
-                    },
-                },
-            ]),
-        ),
-        getSwapStatus: jest.fn(() =>
-            Promise.resolve({
-                '@type': 'Found',
-                txHash: 'mock-tx-hash',
-            }),
-        ),
-    })),
+
+enum Side { BUY = 'BUY', SELL = 'SELL', }
+
+jest.mock('../../../src/services/common-interfaces', () => ({
+    chain: {
+        getAssetForSymbol: jest.fn(),
+        tonClient: {
+            open: jest.fn(),
+        },
+    },
 }));
 
-describe('Stonfi Class', () => {
-    let stonfiInstance: Stonfi;
+jest.mock('../../../src/connectors/dedust/dedust', () => ({
+    factory: {
+        getPool: jest.fn(),
+        getNativeVault: jest.fn(),
+        getJettonVault: jest.fn(),
+    },
+}));
+
+describe('estimateTrade', () => {
+    let dedustInstance: {
+        _ready: boolean;
+        chain: any;
+        factory: any;
+        executeTrade: jest.Mock<any, any, any>;
+        estimateTrade: jest.Mock<any, any, any>;
+        _config: {
+            maxPriceImpact: number;
+            allowedSlippage: string;
+            tradingTypes: any[];
+            chainType: string;
+            availableNetworks: any[]
+        };
+        init: jest.Mock<Promise<void>, [], any>;
+        getSlippage: jest.Mock<any, any, any>
+    };
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        stonfiInstance = Stonfi.getInstance('testnet');
-
-        const mockContract = {
-            getSeqno: jest.fn(() => Promise.resolve(1)),
-            sendTransfer: jest.fn(() => Promise.resolve()),
-        };
-
-        const mockTonClient = {
-            open: jest.fn(() => mockContract),
-        };
-
-        stonfiInstance['chain'] = {
-            ready: jest.fn(() => true),
-            init: jest.fn(() => Promise.resolve()),
-            getAssetForSymbol: jest.fn((symbol: string) => {
-                if (symbol === 'TON') return { assetId: { address: 'ton-address' }, decimals: 9 };
-                if (symbol === 'AIOTX') return { assetId: { address: 'aiotx-address' }, decimals: 9 };
-                return null;
-            }),
-            getAccountFromAddress: jest.fn(() =>
-                Promise.resolve({
-                    secretKey: 'mock-secret-key',
-                    publicKey: 'mock-public-key',
-                })
-            ),
-            tonClient: mockTonClient,
-            wallet: {
-                address: {
-                    toString: jest.fn(() => 'mock-wallet-address'),
-                },
+        dedustInstance = {
+            _ready: true,
+            chain: require('../../../src/services/common-interfaces.ts').chain,
+            factory: require('../../../src/connectors/dedust/dedust.ts').factory,
+            executeTrade: jest.fn(),
+            estimateTrade: jest.fn(), // Mock inicial
+            _config: {
+                maxPriceImpact: 30,
+                allowedSlippage: '',
+                tradingTypes: [],
+                chainType: '',
+                availableNetworks: []
             },
-        } as any;
+            init: jest.fn(() => Promise.resolve()),
+            getSlippage: jest.fn().mockReturnValue({ value: BigNumber.from('10000000'), decimals: 6 }),
+        };
+
+        dedustInstance.estimateTrade.mockRejectedValue(
+          new InitializationError(
+            SERVICE_UNITIALIZED_ERROR_MESSAGE('Dedust'),
+            SERVICE_UNITIALIZED_ERROR_CODE
+          )
+        );
+
+        jest.clearAllMocks();
     });
 
-    describe('Static Methods', () => {
-        it('getInstance should return a singleton instance', () => {
-            const instance1 = Stonfi.getInstance('testnet');
-            const instance2 = Stonfi.getInstance('testnet');
-            expect(instance1).toBe(instance2);
-        });
+    it('You should launch initializanerror when _Ready is false', async () => {
+        dedustInstance._ready = false;
 
-        it('generateUniqueHash should return a unique hash', () => {
-            const input = 'test-input';
-            const hash = Stonfi.generateUniqueHash(input);
-            const expectedHash = createHash('sha256').update(input).digest('hex');
-            expect(hash).toBe(expectedHash);
-        });
-
-        it('generateQueryId should return a valid query ID', () => {
-            const hash = '12345abcde';
-            const queryId = Stonfi.generateQueryId(10, hash);
-            expect(queryId).toBeGreaterThanOrEqual(1000000000);
-            expect(queryId).toBeLessThanOrEqual(9999999999);
-        });
+        await expect(
+          dedustInstance.estimateTrade({
+              chain: 'ton',
+              network: 'testnet',
+              side: Side.BUY,
+              base: 'BASE',
+              quote: 'QUOTE',
+              amount: '10',
+          })
+        ).rejects.toThrow(
+          new InitializationError(
+            SERVICE_UNITIALIZED_ERROR_MESSAGE('Dedust'),
+            SERVICE_UNITIALIZED_ERROR_CODE
+          )
+        );
     });
 
-    describe('Instance Methods', () => {
-        it('init should initialize the chain and set ready state', async () => {
-            stonfiInstance['chain'].ready = jest.fn(() => false);
-            await stonfiInstance.init();
-            expect(stonfiInstance['chain'].init).toHaveBeenCalled();
-            expect(stonfiInstance.ready()).toBe(true);
+    it('should throw an error if the base or quote token is not found', async () => {
+        dedustInstance.chain.getAssetForSymbol.mockReturnValueOnce(null);
+
+        await expect(
+          dedustInstance.estimateTrade({ base: 'INVALID', quote: 'QUOTE', amount: '10' })
+        ).rejects.toThrow(`${TOKEN_NOT_SUPPORTED_ERROR_MESSAGE}INVALID or QUOTE`);
+    });
+
+    it('must lake an error if the amount is invalid', async () => {
+        await expect(
+          dedustInstance.estimateTrade({ base: 'BASE', quote: 'QUOTE', amount: '0' })
+        ).rejects.toThrow(AMOUNT_NOT_SUPPORTED_ERROR_MESSAGE);
+
+        await expect(
+          dedustInstance.estimateTrade({ base: 'BASE', quote: 'QUOTE', amount: '-1' })
+        ).rejects.toThrow(AMOUNT_NOT_SUPPORTED_ERROR_MESSAGE);
+    });
+
+    it('It must correctly calculate trade, expertadamunt and expericedprice', async () => {
+        const mockBaseToken = {
+            symbol: 'BASE',
+            decimals: 6,
+            assetId: { address: 'mock-base-address' },
+        };
+        const mockQuoteToken = {
+            symbol: 'QUOTE',
+            decimals: 6,
+            assetId: { address: 'mock-quote-address' },
+        };
+
+        dedustInstance.estimateTrade({ base: 'BASE', quote: 'QUOTE', amount: '-1' })
+          .chain.getAssetForSymbol
+          .mockReturnValueOnce(mockBaseToken)
+          .mockReturnValueOnce(mockQuoteToken);
+
+        const mockPool = {
+            getReadinessStatus: jest.fn().mockResolvedValue('READY'),
+            getEstimatedSwapOut: jest.fn().mockResolvedValue({
+                amountOut: BigInt(1000000),
+                tradeFee: BigInt(100),
+            }),
+        };
+        const mockVault = { getReadinessStatus: jest.fn().mockResolvedValue('READY') };
+
+        dedustInstance.chain.tonClient.open.mockResolvedValueOnce(mockPool).mockResolvedValueOnce(mockVault);
+        dedustInstance.factory.getPool.mockResolvedValue({});
+        dedustInstance.factory.getNativeVault.mockResolvedValue({});
+
+        const result = await dedustInstance.estimateTrade({
+            base: 'BASE',
+            quote: 'QUOTE',
+            amount: '1',
         });
 
-        it('getSlippage should return the correct slippage percentage', () => {
-            stonfiInstance['_config'] = { allowedSlippage: '1/100' } as any;
-            expect(stonfiInstance.getSlippage()).toBeCloseTo(0.01);
-        });
+        expect(result).toHaveProperty('trade');
+        expect(result).toHaveProperty('expectedAmount');
+        expect(result).toHaveProperty('expectedPrice');
 
-        it('estimateTrade should throw an error for unsupported tokens', async () => {
-            const priceRequest: PriceRequest = { base: 'INVALID', quote: 'AIOTX', amount: '100', side: 'BUY', chain: 'ton', network: 'testnet' };
-            await expect(stonfiInstance.estimateTrade(priceRequest)).rejects.toThrow(new HttpException(500, TOKEN_NOT_SUPPORTED_ERROR_MESSAGE, TOKEN_NOT_SUPPORTED_ERROR_CODE));
-        });
+        expect(result.expectedAmount).toBeCloseTo(1);
+        expect(result.expectedPrice).toBeCloseTo(1);
+    });
 
-        it('estimateTrade should calculate correct price and amount for a valid trade', async () => {
-            const priceRequest: PriceRequest = { base: 'TON', quote: 'AIOTX', amount: '100', side: 'BUY', chain: 'ton', network: 'testnet' };
-            const result = await stonfiInstance.estimateTrade(priceRequest);
-            expect(result.expectedPrice).toBe(2);
-            expect(result.expectedAmount).toBe(100);
-        });
+    it('should launch uniswapishhpriceerror if the pool is not ready', async () => {
+        const mockBaseToken = { symbol: 'BASE', decimals: 6, assetId: { address: 'mock-base-address' } };
+        const mockQuoteToken = { symbol: 'QUOTE', decimals: 6, assetId: { address: 'mock-quote-address' } };
 
-        it('waitForConfirmation should return a confirmation result', async () => {
-            const result = await stonfiInstance.waitForConfirmation('mock-wallet-address', 'mock-query-id');
-            expect(result.txHash).toBe('mock-tx-hash');
-        });
+        dedustInstance.chain.getAssetForSymbol
+          .mockReturnValueOnce(mockBaseToken)
+          .mockReturnValueOnce(mockQuoteToken);
 
-        it('waitForTransactionHash should return transaction hash', async () => {
-            const result = await stonfiInstance.waitForTransactionHash('mock-wallet-address', 'mock-query-id');
-            if (result["@type"] === "Found")
-                expect(result.txHash).toBe('mock-tx-hash');
+        const mockPool = { getReadinessStatus: jest.fn().mockResolvedValue('NOT_READY') };
+
+        dedustInstance.chain.tonClient.open.mockResolvedValueOnce(mockPool);
+        dedustInstance.factory.getPool.mockResolvedValue({}); // Simular retorno para pool
+
+        await expect(
+          dedustInstance.estimateTrade({ base: 'BASE', quote: 'QUOTE', amount: '1' })
+        ).rejects.toThrow('Pool does not exist or is not ready');
+    });
+
+    it('should launch uniswapishhpriceerror if the price impact is higher than allowed', async () => {
+        const mockBaseToken = {
+            symbol: 'BASE',
+            decimals: 6,
+            assetId: { address: 'mock-base-address' },
+        };
+        const mockQuoteToken = {
+            symbol: 'QUOTE',
+            decimals: 6,
+            assetId: { address: 'mock-quote-address' },
+        };
+
+        dedustInstance.chain.getAssetForSymbol
+          .mockReturnValueOnce(mockBaseToken)
+          .mockReturnValueOnce(mockQuoteToken);
+
+        const mockPool = {
+            getReadinessStatus: jest.fn().mockResolvedValue('READY'),
+            getEstimatedSwapOut: jest.fn().mockResolvedValue({
+                amountOut: BigInt(500000),
+                tradeFee: BigInt(100),
+            }),
+        };
+        const mockVault = { getReadinessStatus: jest.fn().mockResolvedValue('READY') };
+
+        dedustInstance.chain.tonClient.open.mockResolvedValueOnce(mockPool).mockResolvedValueOnce(mockVault);
+        dedustInstance.factory.getPool.mockResolvedValue({});
+        dedustInstance.factory.getNativeVault.mockResolvedValue({});
+
+        await expect(
+          dedustInstance.estimateTrade({ base: 'BASE', quote: 'QUOTE', amount: '1' })
+        ).rejects.toThrow(
+          `Price impact too high: 50.00% > ${dedustInstance._config.maxPriceImpact}%`
+        );
+    });
+
+    it('must ever earny message for network problems', async () => {
+        dedustInstance.chain.getAssetForSymbol.mockReturnValueOnce({
+            symbol: 'BASE',
+            decimals: 6,
+            assetId: { address: 'mock-base-address' },
         });
+        dedustInstance.factory.getPool.mockRejectedValue(new Error('network error'));
+
+        await expect(
+          dedustInstance.estimateTrade({ base: 'BASE', quote: 'QUOTE', amount: '1' })
+        ).rejects.toThrow(NETWORK_ERROR_MESSAGE);
     });
 });
