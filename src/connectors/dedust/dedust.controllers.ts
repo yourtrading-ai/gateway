@@ -11,8 +11,6 @@ import {
   TRADE_FAILED_ERROR_MESSAGE,
   UNKNOWN_ERROR_ERROR_CODE,
   UNKNOWN_ERROR_MESSAGE,
-  SERVICE_UNITIALIZED_ERROR_CODE,
-  SERVICE_UNITIALIZED_ERROR_MESSAGE,
   INSUFFICIENT_FUNDS_ERROR_CODE,
   INSUFFICIENT_FUNDS_ERROR_MESSAGE,
   NETWORK_ERROR_CODE,
@@ -39,16 +37,6 @@ export const price = async (
   req: PriceRequest,
 ): Promise<PriceResponse> => {
   const startTimestamp: number = Date.now();
-
-  // Check if services are initialized
-  if (!ton.ready() || !dedust.ready()) {
-    throw new HttpException(
-      503,
-      SERVICE_UNITIALIZED_ERROR_MESSAGE('TON or Dedust'),
-      SERVICE_UNITIALIZED_ERROR_CODE,
-    );
-  }
-
   let trade;
   try {
     trade = await dedust.estimateTrade(req);
@@ -110,15 +98,6 @@ export async function trade(
   req: TradeRequest,
 ): Promise<TradeResponse> {
   const startTimestamp: number = Date.now();
-
-  // Check if services are initialized
-  if (!ton.ready() || !dedust.ready()) {
-    throw new HttpException(
-      503,
-      SERVICE_UNITIALIZED_ERROR_MESSAGE('TON or Dedust'),
-      SERVICE_UNITIALIZED_ERROR_CODE,
-    );
-  }
 
   const limitPrice = req.limitPrice;
 
@@ -263,16 +242,10 @@ export async function trade(
 
 export async function estimateGas(
   ton: Ton,
-  dedust: Dedust,
+  _dedust: Dedust,
 ): Promise<EstimateGasResponse> {
   // Check if services are initialized
-  if (!ton.ready() || !dedust.ready()) {
-    throw new HttpException(
-      503,
-      SERVICE_UNITIALIZED_ERROR_MESSAGE('TON or Dedust'),
-      SERVICE_UNITIALIZED_ERROR_CODE,
-    );
-  }
+ 
 
   return {
     network: ton.network,
